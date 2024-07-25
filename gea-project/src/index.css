@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Hide scrollbars */
+  height: 100vh; /* Full viewport height */
+}
+
+.header {
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers content horizontally */
+}
+
+.content {
+  flex: 1; /* Take up remaining space */
+  display: flex; /* Use Flexbox for grid layout */
+  box-sizing: border-box; /* Include padding and borders in width calculations */
+  overflow: hidden; /* Hide overflow if content is too large */
+}
+
+.grid {
+  background: rgb(255, 255, 255);
+  display: flex;
+  flex-wrap: wrap;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box; /* Ensure padding is included in the width and height */
+}
+
+.grid-item {
+  background: rgb(86, 86, 86);
+  width: calc(50vw - 6px); /* 50% of viewport width minus padding/margin */
+  height: calc(50vh - 6px); /* 50% of viewport height minus padding/margin */
+  margin: 3px; /* Space between grid items */
+  display: flex;
+  border-radius: 4px;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+path {
+  fill: #9b5b5b;
+}
