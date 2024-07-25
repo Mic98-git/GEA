@@ -1,0 +1,2 @@
+# GEA
+Global Earthquakes Analytics
