@@ -75,10 +75,10 @@ df.insert(0, 'id', ids)
 gdf = gpd.GeoDataFrame(df, geometry = gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326")
 
 # Create a GeoDataFrame that only contains the geometry
-gdf_geometry_only = gdf[['geometry']]
+#gdf_geometry_only = gdf[['geometry']]
 
 # Save to GeoJSON file
-gdf_geometry_only.to_file("../gea-vaproject/public/eq_coordinates.geojson", driver="GeoJSON")
+gdf.to_file("../gea-project/public/eq_coordinates.geojson", driver="GeoJSON")
 
 ## Parallel coordinates encoding and preprocessing
 le_magnitude_type = LabelEncoder()
@@ -127,4 +127,4 @@ df['tsne_y'] = y
 df.drop(columns=['magType_encoded', 'type_encoded'], inplace=True)
 
 # Export preprocessed dataset
-df.to_csv('../gea-vaproject/public/prep_dataset.csv', index=False, sep=',')
+df.to_csv('../gea-project/public/prep_dataset.csv', index=False, sep=',')
