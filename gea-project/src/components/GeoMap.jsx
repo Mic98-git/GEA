@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { feature } from "topojson-client";
+import crossfilter from "crossfilter2";
 
 const depthColorMap = {
   shallow: "red",
@@ -9,31 +10,49 @@ const depthColorMap = {
 };
 
 const magnitudeSizeMap = {
-  minor: 1,
+  minor: 2,
   light: 3,
   moderate: 4.5,
   strong: 5.5,
-  major: 6,
-  great: 7,
+  major: 6
 };
 
 const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   const svgRef = useRef();
+  const zoomRef = useRef(null);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
-  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
-  const [transform, setTransform] = useState(d3.zoomIdentity);
+  const [crossfilterData, setCrossfilterData] = useState(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const topojsonResponse = await fetch(topojsonUrl);
-        const topojsonData = await topojsonResponse.json();
+        const topojsonData = await d3.json(topojsonUrl);
         setTopojsonData(topojsonData);
 
-        const geojsonResponse = await fetch(geojsonUrl);
-        const geojsonData = await geojsonResponse.json();
-        setGeojsonData(geojsonData);
+        const geojsonData = await d3.json(geojsonUrl);
+
+        // Process GeoJSON features
+        const geojsonWithAttributes = geojsonData.features.map((feature) => {
+          const depthCategory = feature.properties.depth_category || "unknown";
+          const magnitudeCategory =
+            feature.properties.magnitude_category || "minor";
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              depthCategory,
+              magnitudeCategory,
+            },
+          };
+        });
+
+        setGeojsonData({ ...geojsonData, features: geojsonWithAttributes });
+
+        // Initialize Crossfilter
+        const ndx = crossfilter(geojsonWithAttributes);
+        setCrossfilterData(ndx);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -43,7 +62,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   }, [topojsonUrl, geojsonUrl]);
 
   useEffect(() => {
-    if (topojsonData && geojsonData) {
+    if (topojsonData && geojsonData && crossfilterData) {
       const svg = d3.select(svgRef.current);
       const { width, height } = dimensions;
 
@@ -53,29 +72,27 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       // Projection and path
       const projection = d3
         .geoMercator()
-        .fitSize([width - 20, height - 20], worldGeoJson)
+        .fitSize([width, height], worldGeoJson)
         .translate([width / 2, height / 1.5])
-        .scale(65);
+        .scale(100);
       const path = d3.geoPath().projection(projection);
 
       // Clear previous SVG content
       svg.selectAll("*").remove();
 
-      // Set the viewBox to ensure the map fits and is centered
-      svg
-        .attr("viewBox", `0 0 ${width} ${height}`)
-        .attr("preserveAspectRatio", "xMidYMid meet");
-
       // Define zoom behavior
-      const zoom = d3.zoom().on("zoom", (event) => {
-        setTransform(event.transform);
-      });
+      const zoomBehavior = d3
+        .zoom()
+        .scaleExtent([0.5, 10])
+        .on("zoom", (event) => {
+          svg.selectAll("g").attr("transform", event.transform.toString());
+        });
 
-      // Apply zoom behavior to the SVG
-      svg.call(zoom);
+      svg.call(zoomBehavior);
+      zoomRef.current = zoomBehavior; // Store the zoom behavior in the ref
 
       // Draw the map
-      const g = svg.append("g").attr("transform", transform.toString());
+      const g = svg.append("g");
 
       g.selectAll("path")
         .data(worldGeoJson.features)
@@ -85,33 +102,32 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .attr("fill", "#cccccc")
         .attr("stroke", "#333333");
 
-      // Process GeoJSON features
-      const geojsonWithAttributes = geojsonData.features.map((feature) => {
-        const depthCategory = feature.properties.depth_category || "unknown";
-        const magnitudeCategory =
-          feature.properties.magnitude_category || "minor";
-        return {
-          ...feature,
-          properties: {
-            ...feature.properties,
-            depthCategory,
-            magnitudeCategory,
-          },
-        };
-      });
-
-      // Plot points from GeoJSON
+      // Plot points
       g.selectAll("circle")
-        .data(geojsonWithAttributes)
+        .data(geojsonData.features)
         .enter()
         .append("circle")
-        .attr("cx", (d) => projection(d.geometry.coordinates)[0])
-        .attr("cy", (d) => projection(d.geometry.coordinates)[1])
-        .attr("r", (d) => magnitudeSizeMap[d.properties.magnitudeCategory] || 3)
-        .attr("fill", (d) => depthColorMap[d.properties.depthCategory] || "#000000")
-        .attr("opacity", 0.7);
+        .attr("cx", (d) => {
+          const [x, y] = projection(d.geometry.coordinates);
+          return x;
+        })
+        .attr("cy", (d) => {
+          const [x, y] = projection(d.geometry.coordinates);
+          return y;
+        })
+        .attr("r", (d) => {
+          const magnitude = d.properties.magnitudeCategory;
+          const size = magnitudeSizeMap[magnitude];
+          return size || 3; // Default size if not found
+        })
+        .attr("fill", (d) => {
+          const depth = d.properties.depthCategory;
+          const color = depthColorMap[depth];
+          return color || "#000000"; // Default color if not found
+        })
+        .attr("opacity", 0.5);
     }
-  }, [topojsonData, geojsonData, dimensions, transform]);
+  }, [topojsonData, geojsonData, crossfilterData, dimensions]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -123,13 +139,63 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const zoomIn = () => {
+    if (zoomRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(200)
+        .call(zoomRef.current.scaleBy, 1.5);
+    }
+  };
+
+  const zoomOut = () => {
+    if (zoomRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(200)
+        .call(zoomRef.current.scaleBy, 0.5);
+    }
+  };
 
   return (
     <div className="map">
       <svg ref={svgRef}></svg>
+      <div className="zoom-controls">
+        <button onClick={zoomIn}>+</button>
+        <button onClick={zoomOut}>-</button>
+      </div>
+      <div className="map-legend">
+      {Object.entries(depthColorMap).map(([key, color]) => (
+        <div key={key} className="map-legend-item">
+          <span
+            className="map-legend-square"
+            style={{
+              background: color,
+              width: 10,
+              height: 10,
+            }}
+          ></span>
+          <span className="map-legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+        </div>
+      ))}
+      {Object.entries(magnitudeSizeMap).map(([key, size]) => (
+        <div key={key} className="map-legend-item">
+          <span
+            className="map-legend-circle"
+            style={{
+              background: '#555', // color for magnitude legend items
+              width: size * 2,
+              height: size * 2,
+            }}
+          ></span>
+          <span className="map-legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+        </div>
+      ))}
+    </div>
     </div>
   );
 };

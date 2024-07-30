@@ -7,17 +7,12 @@ from sklearn import preprocessing
 
 df = pd.read_csv('./earthquakes_2023_global.csv')
 
-# Remove unnecessary rows and columns
+# Remove unnecessary rows (duplicates and null) and columns
 df = df.drop(df[df['status'] == 'automatic'].index)
-df.drop(['gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
-
-# Remove duplicate rows and fill missing values with mean
 df.drop_duplicates(inplace=True)
-df.fillna({'dmin' : df['dmin'].mean()}, inplace=True)
-df.fillna({'magError' : df['magError'].mean()}, inplace=True)
-df.fillna({'nst' : df['nst'].mean()}, inplace=True)
-df.fillna({'magNst' : df['magNst'].mean()}, inplace=True)
-df.dropna()
+df.dropna(inplace=True)
+df.drop(['gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
+df = df.iloc[15000:20000, :]
 
 # Month and week preprocessing
 months = []
@@ -60,8 +55,6 @@ def categorize_magnitude(magnitude):
         return 'strong'
     elif 7.0 <= magnitude < 8.0:
         return 'major'
-    else:
-        return 'great'
 
 df['depth_category'] = df['depth'].apply(categorize_depth)
 df['magnitude_category'] = df['mag'].apply(categorize_magnitude)
@@ -73,9 +66,6 @@ df.insert(0, 'id', ids)
 
 # Create a GeoDataFrame
 gdf = gpd.GeoDataFrame(df, geometry = gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326")
-
-# Create a GeoDataFrame that only contains the geometry
-#gdf_geometry_only = gdf[['geometry']]
 
 # Save to GeoJSON file
 gdf.to_file("../gea-project/public/eq_coordinates.geojson", driver="GeoJSON")
@@ -111,7 +101,7 @@ df['depth_category'] = df['depth_category'].map(lambda x: f"{x}: {depth_category
 df['magType_encoded'] = df['magType'].apply(lambda x: int(x.split(': ')[1]))
 df['type_encoded'] = df['type'].apply(lambda x: int(x.split(': ')[1]))
 core_features = ['mag', 'depth', 'latitude', 'longitude', 'magType_encoded', 'type_encoded', 'depthError', 'magError', 'magNst']
-df_filtered = df[core_features]
+df_filtered = df[core_features].copy()
 
 data = df_filtered.values
 std_scale = preprocessing.StandardScaler().fit(data)

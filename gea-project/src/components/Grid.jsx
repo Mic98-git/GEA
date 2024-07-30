@@ -16,7 +16,7 @@ const VisualizationGrid = () => {
             </div>
             <div key="secondcolumn" className="second-column">
                 <div key="timeheatmap" className="grid-item"><TimeHeatmap /></div>
-                <div key="tsne" className="grid-item"><TSNEScatterPlot /></div>
+                <div key="tsne" className="grid-item"><TSNEScatterPlot csvUrl={csvUrl}/></div>
             </div>
         </div>
     );
