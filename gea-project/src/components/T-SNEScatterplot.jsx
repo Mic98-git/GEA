@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const magnitudeCategoryColorMap = {
-  minor: "yellow",
+  minor: "#FFFF33",
   light: "green",
-  moderate: "orange",
+  moderate: "#8B4000",
   strong: "red",
   major: "purple"
 };
@@ -25,9 +25,9 @@ const TSNEScatterplot = ({ csvUrl }) => {
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    const width = 800;
-    const height = 600;
-    const margin = { top: 20, right: 30, bottom: 30, left: 40 };
+    const width = 700;
+    const height = 470;
+    const margin = { top: 20, right: 20, bottom: 60, left: 40 };
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
@@ -76,18 +76,18 @@ const TSNEScatterplot = ({ csvUrl }) => {
   return (
     <div className="scatterplot">
       <svg ref={svgRef}></svg>
-      <div className="scatterplot-legend">
+      <div className="legend">
       {Object.entries(magnitudeCategoryColorMap).map(([key, color]) => (
-        <div key={key} className="scatterplot-legend-item">
+        <div key={key} className="legend-item">
           <span
-            className="scatterplot-legend-circle"
+            className="legend-circle"
             style={{
               background: color,
-              width: 10,
-              height: 10,
+              width: 8,
+              height: 8,
             }}
           ></span>
-          <span className="scatterplot-legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
         </div>
       ))}
       </div>

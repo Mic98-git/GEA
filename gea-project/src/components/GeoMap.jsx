@@ -168,31 +168,31 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         <button onClick={zoomIn}>+</button>
         <button onClick={zoomOut}>-</button>
       </div>
-      <div className="map-legend">
+      <div className="legend">
       {Object.entries(depthColorMap).map(([key, color]) => (
-        <div key={key} className="map-legend-item">
+        <div key={key} className="legend-item">
           <span
-            className="map-legend-square"
+            className="legend-square"
             style={{
               background: color,
-              width: 10,
-              height: 10,
+              width: 8,
+              height: 8,
             }}
           ></span>
-          <span className="map-legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
         </div>
       ))}
       {Object.entries(magnitudeSizeMap).map(([key, size]) => (
-        <div key={key} className="map-legend-item">
+        <div key={key} className="legend-item">
           <span
-            className="map-legend-circle"
+            className="legend-circle"
             style={{
               background: '#555', // color for magnitude legend items
               width: size * 2,
               height: size * 2,
             }}
           ></span>
-          <span className="map-legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
         </div>
       ))}
     </div>
