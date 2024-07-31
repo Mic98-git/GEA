@@ -64,7 +64,8 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   useEffect(() => {
     if (topojsonData && geojsonData && crossfilterData) {
       const svg = d3.select(svgRef.current);
-      const { width, height } = dimensions;
+      const width = svg.node().parentNode.clientWidth;
+      const height = svg.node().parentNode.clientHeight;
 
       // Convert TopoJSON to GeoJSON
       const worldGeoJson = feature(topojsonData, topojsonData.objects["world"]);
@@ -126,6 +127,9 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           return color || "#000000"; // Default color if not found
         })
         .attr("opacity", 0.5);
+
+      svg.attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet");
     }
   }, [topojsonData, geojsonData, crossfilterData, dimensions]);
 

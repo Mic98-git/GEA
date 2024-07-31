@@ -12,7 +12,7 @@ const VisualizationGrid = () => {
         <div className="grid">
             <div key="firstcolumn" className="first-column">
                 <div key="geomap" className="grid-item"><GeoMap topojsonUrl={topojsonUrl} geojsonUrl={geojsonUrl} /></div>
-                <div key="parallel" className="grid-item"><ParallelCoordinates /></div>
+                <div key="parallel" className="grid-item"><ParallelCoordinates csvUrl={csvUrl}/></div>
             </div>
             <div key="secondcolumn" className="second-column">
                 <div key="timeheatmap" className="grid-item"><TimeHeatmap /></div>

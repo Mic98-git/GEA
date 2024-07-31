@@ -25,8 +25,8 @@ const TSNEScatterplot = ({ csvUrl }) => {
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    const width = 700;
-    const height = 470;
+    const width = svg.node().parentNode.clientWidth;
+    const height = svg.node().parentNode.clientHeight;
     const margin = { top: 20, right: 20, bottom: 60, left: 40 };
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
@@ -43,13 +43,17 @@ const TSNEScatterplot = ({ csvUrl }) => {
 
     const xAxis = (g) =>
       g.attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x)).selectAll("path, line, text") // Select paths, lines, and text
-        .style("stroke", "white") // Set axis line color to white
+        .call(d3.axisBottom(x))
+        .call((g) => g.selectAll(".tick line").attr("stroke", "#999").attr("stroke-width", 1))
+        .call((g) => g.selectAll(".domain").attr("stroke", "#999").attr("stroke-width", 1))
+        .call((g) => g.selectAll("text").attr("fill", "#fff").style("font-size", "10px"));
 
     const yAxis = (g) =>
-      g.attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y))
-        .selectAll("path, line, text") // Select paths, lines, and text
-        .style("stroke", "white") // Set axis line color to white
+      g.attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y))
+        .call((g) => g.selectAll(".tick line").attr("stroke", "#999").attr("stroke-width", 1))
+        .call((g) => g.selectAll(".domain").attr("stroke", "#999").attr("stroke-width", 1))
+        .call((g) => g.selectAll("text").attr("fill", "#fff").style("font-size", "10px"));
 
     svg.selectAll("*").remove(); // clear previous SVG content
 
