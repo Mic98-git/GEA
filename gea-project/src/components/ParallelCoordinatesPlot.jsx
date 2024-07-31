@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const ParallelCoordinates = ({ csvUrl }) => {
-  const dimensions = ["magType", "type", "locationSource", "magSource", "depth_category"];
+  const dimensions = ["magSource", "magType", "type", "depth_category"];
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState({});
