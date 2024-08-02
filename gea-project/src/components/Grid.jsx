@@ -15,7 +15,7 @@ const VisualizationGrid = () => {
                 <div key="parallel" className="grid-item"><ParallelCoordinates csvUrl={csvUrl}/></div>
             </div>
             <div key="secondcolumn" className="second-column">
-                <div key="timeheatmap" className="grid-item"><TimeHeatmap /></div>
+                <div key="timeheatmap" className="grid-item"><TimeHeatmap csvUrl={csvUrl}/></div>
                 <div key="tsne" className="grid-item"><TSNEScatterPlot csvUrl={csvUrl}/></div>
             </div>
         </div>

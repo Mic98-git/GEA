@@ -14,13 +14,20 @@ const TSNEScatterplot = ({ csvUrl }) => {
   const [tSNEData, setTSNEData] = useState([]);
 
   useEffect(() => {
-    d3.csv(csvUrl).then(function(data) {
-      data.forEach(function(d) {
-        d.tsne_x = +d.tsne_x;
-        d.tsne_y = +d.tsne_y;
-      });
-      setTSNEData(data);
-    });
+    const fetchData = async () => {
+      try {
+        await d3.csv(csvUrl).then(function(data) {
+          data.forEach(function(d) {
+            d.tsne_x = +d.tsne_x;
+            d.tsne_y = +d.tsne_y;
+          });
+          setTSNEData(data);
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
   }, [csvUrl]);
 
   useEffect(() => {

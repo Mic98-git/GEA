@@ -8,36 +8,40 @@ const ParallelCoordinates = ({ csvUrl }) => {
   const [categoryMappings, setCategoryMappings] = useState({});
 
   useEffect(() => {
-    d3.csv(csvUrl).then(data => {
-      const mappings = {};
-      data.forEach(d => {
-        Object.keys(d).forEach(key => {
-          if (dimensions.includes(key)) {
-            const [category, numericValue] = d[key].split(':');
-              d[key] = parseFloat(numericValue);
+    const fetchData = async () => {
+      try {
+        await d3.csv(csvUrl).then(function (data) {
+          const mappings = {};
+          data.forEach(d => {
+            Object.keys(d).forEach(key => {
+              if (dimensions.includes(key)) {
+                const [category, numericValue] = d[key].split(':');
+                d[key] = parseFloat(numericValue);
 
-              // Create or update the category mapping
-              if (!mappings[key]) mappings[key] = {};
-              mappings[key][parseFloat(numericValue)] = category;
-          }
+                // Create or update the category mapping
+                if (!mappings[key]) mappings[key] = {};
+                mappings[key][parseFloat(numericValue)] = category;
+              }
+            });
+          });
+          setData(data);
+          setCategoryMappings(mappings);
         });
-      });
-      setData(data);
-      setCategoryMappings(mappings);
-      console.log(data.length);
-    }).catch(error => {
-      console.error("Error loading or parsing CSV data:", error);
-    });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
   }, [csvUrl]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
     const width = svg.node().parentNode.clientWidth;
     const height = svg.node().parentNode.clientHeight;
-    const margin = { top: 30, right: 30, bottom: 10, left: 30 };
+    const margin = { top: 50, right: 30, bottom: 20, left: 30 };
 
     svg.attr("viewBox", `0 0 ${width} ${height}`)
-    .attr("preserveAspectRatio", "xMidYMid meet");
+      .attr("preserveAspectRatio", "xMidYMid meet");
 
     const x = d3.scalePoint()
       .range([margin.left, width - margin.right])
@@ -65,22 +69,30 @@ const ParallelCoordinates = ({ csvUrl }) => {
       .style("fill", "none")
       .style("stroke", "steelblue");
 
-      const axis = svg.selectAll("g.axis")
+    const axis = svg.selectAll("g.axis")
       .data(dimensions)
       .enter().append("g")
       .attr("class", "axis")
       .attr("transform", d => `translate(${x(d)})`)
-      .each(function(d) { 
+      .each(function (d) {
         d3.select(this).call(d3.axisLeft(y[d])
           .tickFormat(value => categoryMappings[d] ? categoryMappings[d][value] : value));
       });
 
-      axis.append("text")
+    axis.append("text")
       .style("text-anchor", "middle")
-      .attr("y", margin.top - 15)
+      .attr("y", margin.top - 25)
       .text(d => d)
-      .style("fill", "white");
-    }, [data]);
+      .style("fill", "white")
+      .style("font-size", "15px");
+
+    axis.selectAll(".tick text")
+      .style("fill", "white")
+      .style("font-size", "12px");
+
+    axis.selectAll("path, line")
+      .style("stroke", "white");
+  }, [data]);
 
   return (
     <div className="parallel-coordinates">

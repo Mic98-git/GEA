@@ -28,31 +28,28 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const topojsonData = await d3.json(topojsonUrl);
-        setTopojsonData(topojsonData);
-
-        const geojsonData = await d3.json(geojsonUrl);
-
-        // Process GeoJSON features
-        const geojsonWithAttributes = geojsonData.features.map((feature) => {
-          const depthCategory = feature.properties.depth_category || "unknown";
-          const magnitudeCategory =
-            feature.properties.magnitude_category || "minor";
-          return {
-            ...feature,
-            properties: {
-              ...feature.properties,
-              depthCategory,
-              magnitudeCategory,
-            },
-          };
+        await d3.json(topojsonUrl).then(function(data) {
+          setTopojsonData(data);
         });
-
-        setGeojsonData({ ...geojsonData, features: geojsonWithAttributes });
-
-        // Initialize Crossfilter
-        const ndx = crossfilter(geojsonWithAttributes);
-        setCrossfilterData(ndx);
+        
+        await d3.json(geojsonUrl).then(function(data) {
+          const geojsonWithAttributes = data.features.map((feature) => {
+            const depthCategory = feature.properties.depth_category || "unknown";
+            const magnitudeCategory = feature.properties.magnitude_category || "minor";
+            return {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                depthCategory,
+                magnitudeCategory,
+              },
+            };
+          });
+          setGeojsonData({ ...data, features: geojsonWithAttributes });
+          // Initialize Crossfilter
+          const ndx = crossfilter(geojsonWithAttributes);
+          setCrossfilterData(ndx);
+        });
       } catch (error) {
         console.error("Error fetching data:", error);
       }
