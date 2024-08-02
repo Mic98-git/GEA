@@ -91,7 +91,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .append("text")
       .attr("class", "weekLabel")
       .text((d) => d)
-      .attr("x", -margin.left / 2)
+      .attr("x", -margin.left / 3)
       .attr("y", (d, i) => i * (cellHeight + cellSpacing) + cellHeight / 2)
       .attr("dy", ".32em")
       .style("text-anchor", "middle");
@@ -104,7 +104,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("class", "monthLabel")
       .text((d) => d)
       .attr("x", (d, i) => i * (cellWidth + cellSpacing) + cellWidth / 2)
-      .attr("y", -margin.top / 2)
+      .attr("y", -margin.top / 3)
       .attr("dy", ".32em")
       .style("text-anchor", "middle");
 
