@@ -20,6 +20,7 @@ const magnitudeSizeMap = {
 const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   const svgRef = useRef();
   const zoomRef = useRef(null);
+  const tooltipRef = useRef(null);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
@@ -61,13 +62,13 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   useEffect(() => {
     if (topojsonData && geojsonData && crossfilterData) {
       const svg = d3.select(svgRef.current);
+      const tooltip = d3.select(tooltipRef.current);
       const width = svg.node().parentNode.clientWidth;
       const height = svg.node().parentNode.clientHeight;
 
-      // Convert TopoJSON to GeoJSON
+      const panPadding = 100;
       const worldGeoJson = feature(topojsonData, topojsonData.objects["world"]);
 
-      // Projection and path
       const projection = d3
         .geoMercator()
         .fitSize([width, height], worldGeoJson)
@@ -75,21 +76,8 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .scale(100);
       const path = d3.geoPath().projection(projection);
 
-      // Clear previous SVG content
       svg.selectAll("*").remove();
 
-      // Define zoom behavior
-      const zoomBehavior = d3
-        .zoom()
-        .scaleExtent([0.5, 10])
-        .on("zoom", (event) => {
-          svg.selectAll("g").attr("transform", event.transform.toString());
-        });
-
-      svg.call(zoomBehavior);
-      zoomRef.current = zoomBehavior; // Store the zoom behavior in the ref
-
-      // Draw the map
       const g = svg.append("g");
 
       g.selectAll("path")
@@ -100,8 +88,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .attr("fill", "#cccccc")
         .attr("stroke", "#333333");
 
-      // Plot points
-      g.selectAll("circle")
+      const circles = g.selectAll("circle")
         .data(geojsonData.features)
         .enter()
         .append("circle")
@@ -116,14 +103,50 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .attr("r", (d) => {
           const magnitude = d.properties.magnitudeCategory;
           const size = magnitudeSizeMap[magnitude];
-          return size || 3; // Default size if not found
+          return size || 3;
         })
         .attr("fill", (d) => {
           const depth = d.properties.depthCategory;
           const color = depthColorMap[depth];
-          return color || "#000000"; // Default color if not found
+          return color || "#000000";
         })
-        .attr("opacity", 0.5);
+        .attr("opacity", 0.5)
+        .on("mouseover", (event, d) => {
+          tooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>Location:</strong> ${d.properties.place}<br>
+              <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag}<br>
+              <strong>Depth:</strong> ${d.properties.depth} km<br>
+              <strong>Latitude:</strong> ${d.geometry.coordinates[1].toFixed(2)}°<br>
+              <strong>Longitude:</strong> ${d.geometry.coordinates[0].toFixed(2)}°<br>             
+              <strong>Nearest station:</strong> ${d.properties.dmin} km
+            `)
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mouseout", () => {
+          tooltip.style("opacity", 0);
+        });
+
+      const zoomBehavior = d3
+        .zoom()
+        .scaleExtent([0.5, 10])
+        .translateExtent([
+          [-panPadding, -panPadding], 
+          [width + panPadding, height + panPadding]
+        ])
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+          circles.attr("r", (d) => {
+            const magnitude = d.properties.magnitudeCategory;
+            const size = magnitudeSizeMap[magnitude];
+            return (size || 3) / event.transform.k;
+          });
+        });
+
+      svg.call(zoomBehavior);
+      zoomRef.current = zoomBehavior;
 
       svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
@@ -148,7 +171,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
     if (zoomRef.current) {
       d3.select(svgRef.current)
         .transition()
-        .duration(200)
+        .duration(150)
         .call(zoomRef.current.scaleBy, 1.5);
     }
   };
@@ -157,7 +180,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
     if (zoomRef.current) {
       d3.select(svgRef.current)
         .transition()
-        .duration(200)
+        .duration(150)
         .call(zoomRef.current.scaleBy, 0.5);
     }
   };
@@ -169,34 +192,35 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         <button onClick={zoomIn}>+</button>
         <button onClick={zoomOut}>-</button>
       </div>
+      <div ref={tooltipRef} className="tooltip"></div>
       <div className="legend">
-      {Object.entries(depthColorMap).map(([key, color]) => (
-        <div key={key} className="legend-item">
-          <span
-            className="legend-square"
-            style={{
-              background: color,
-              width: 8,
-              height: 8,
-            }}
-          ></span>
-          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        </div>
-      ))}
-      {Object.entries(magnitudeSizeMap).map(([key, size]) => (
-        <div key={key} className="legend-item">
-          <span
-            className="legend-circle"
-            style={{
-              background: '#555', // color for magnitude legend items
-              width: size * 2,
-              height: size * 2,
-            }}
-          ></span>
-          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        </div>
-      ))}
-    </div>
+        {Object.entries(depthColorMap).map(([key, color]) => (
+          <div key={key} className="legend-item">
+            <span
+              className="legend-square"
+              style={{
+                background: color,
+                width: 8,
+                height: 8,
+              }}
+            ></span>
+            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          </div>
+        ))}
+        {Object.entries(magnitudeSizeMap).map(([key, size]) => (
+          <div key={key} className="legend-item">
+            <span
+              className="legend-circle"
+              style={{
+                background: '#555',
+                width: size * 2,
+                height: size * 2,
+              }}
+            ></span>
+            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

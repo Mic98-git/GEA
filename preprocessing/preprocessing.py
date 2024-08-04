@@ -11,7 +11,7 @@ df = pd.read_csv('./earthquakes_2023_global.csv')
 df = df.drop(df[df['status'] == 'automatic'].index)
 df.drop_duplicates(inplace=True)
 df.dropna(inplace=True)
-df.drop(['gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
+df.drop(['nst', 'gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
 df = df.iloc[15000:20000, :]
 
 # Month and week preprocessing
