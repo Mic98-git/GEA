@@ -74,6 +74,10 @@ const TimeHeatmap = ({ csvUrl }) => {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
+    const tooltip = d3.select("body").append("div")
+      .attr("class", "tooltip")
+      .style("opacity", 0);  
+
     g.selectAll("rect")
       .data(data.flat())
       .enter()
@@ -82,7 +86,16 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("y", (d, i) => Math.floor(i / months.length) * (cellHeight + cellSpacing))
       .attr("width", cellWidth)
       .attr("height", cellHeight)
-      .attr("fill", (d) => colorScale(d));
+      .attr("fill", (d) => colorScale(d))
+      .on("mouseover", function(event, d) {
+        tooltip.style("opacity", 1);
+        tooltip.html(`<strong>Events:</strong> ${d}`)
+          .style("left", (event.pageX + 5) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+        tooltip.style("opacity", 0);
+      }),
 
     // Add week labels
     g.selectAll(".weekLabel")
@@ -147,7 +160,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .text(0);
 
     svg.append("text")
-      .attr("x", (legendX + totalCellWidth) + 10 * cellSpacing)
+      .attr("x", (legendX + totalCellWidth) + 12 * cellSpacing)
       .attr("y", legendY + legendHeight)
       .style("text-anchor", "middle")
       .style("fill", "white")

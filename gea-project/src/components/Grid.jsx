@@ -10,16 +10,24 @@ const VisualizationGrid = () => {
 
     return (
         <div className="grid">
-            <div key="firstcolumn" className="first-column">
-                <div key="geomap" className="grid-item"><GeoMap topojsonUrl={topojsonUrl} geojsonUrl={geojsonUrl} /></div>
-                <div key="parallel" className="grid-item"><ParallelCoordinates csvUrl={csvUrl}/></div>
+          <div key="firstcolumn" className="first-column">
+            <div key="geomap" className="grid-item geomap-item">
+              <GeoMap topojsonUrl={topojsonUrl} geojsonUrl={geojsonUrl} />
             </div>
-            <div key="secondcolumn" className="second-column">
-                <div key="timeheatmap" className="grid-item"><TimeHeatmap csvUrl={csvUrl}/></div>
-                <div key="tsne" className="grid-item"><TSNEScatterPlot csvUrl={csvUrl}/></div>
+            <div key="parallel" className="grid-item parallel-item">
+              <ParallelCoordinates csvUrl={csvUrl} />
             </div>
+          </div>
+          <div key="secondcolumn" className="second-column">
+            <div key="timeheatmap" className="grid-item">
+              <TimeHeatmap csvUrl={csvUrl} />
+            </div>
+            <div key="tsne" className="grid-item">
+              <TSNEScatterPlot csvUrl={csvUrl} />
+            </div>
+          </div>
         </div>
-    );
+      );      
 };
 
 export default VisualizationGrid;

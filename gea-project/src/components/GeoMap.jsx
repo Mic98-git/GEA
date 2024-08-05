@@ -73,7 +73,6 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .geoMercator()
         .fitSize([width, height], worldGeoJson)
         .translate([width / 2, height / 1.5])
-        .scale(100);
       const path = d3.geoPath().projection(projection);
 
       svg.selectAll("*").remove();
