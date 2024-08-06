@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { feature } from "topojson-client";
 import crossfilter from "crossfilter2";
+import crosshairIcon from '../assets/crosshair.svg';
 
 const depthColorMap = {
   shallow: "red",
@@ -21,6 +22,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   const svgRef = useRef();
   const zoomRef = useRef(null);
   const tooltipRef = useRef(null);
+  const initialTransformRef = useRef(null);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
@@ -147,6 +149,8 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       svg.call(zoomBehavior);
       zoomRef.current = zoomBehavior;
 
+      initialTransformRef.current = d3.zoomIdentity;
+
       svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
     }
@@ -184,17 +188,45 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
     }
   };
 
+  const resizeMap = () => {
+    if (zoomRef.current && initialTransformRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(150)
+        .call(zoomRef.current.transform, initialTransformRef.current);
+    }
+  };
+
+  const filterByDepth = (depthCategory) => {
+    if (geojsonData) {
+      const svg = d3.select(svgRef.current);
+      svg.selectAll("circle")
+        .attr("opacity", (d) => d.properties.depthCategory === depthCategory ? 1 : 0.05);
+    }
+  };
+
+  const filterByMagnitude = (magnitudeCategory) => {
+    if (geojsonData) {
+      const svg = d3.select(svgRef.current);
+      svg.selectAll("circle")
+        .attr("opacity", (d) => d.properties.magnitudeCategory === magnitudeCategory ? 1 : 0.05);
+    }
+  };
+
   return (
     <div className="map">
       <svg ref={svgRef}></svg>
       <div className="zoom-controls">
-        <button onClick={zoomIn}>+</button>
-        <button onClick={zoomOut}>-</button>
+        <button onClick={zoomIn} title="Zoom in">+</button>
+        <button onClick={zoomOut} title="Zoom out">-</button>
+        <button onClick={resizeMap} title="Recenter Map">
+          <img src={crosshairIcon} className="resize-map"/>
+        </button>
       </div>
       <div ref={tooltipRef} className="tooltip"></div>
       <div className="legend">
         {Object.entries(depthColorMap).map(([key, color]) => (
-          <div key={key} className="legend-item">
+          <button key={key} className="legend-item" onClick={() => filterByDepth(key)}>
             <span
               className="legend-square"
               style={{
@@ -204,10 +236,10 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
               }}
             ></span>
             <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-          </div>
+          </button>
         ))}
         {Object.entries(magnitudeSizeMap).map(([key, size]) => (
-          <div key={key} className="legend-item">
+          <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
             <span
               className="legend-circle"
               style={{
@@ -217,7 +249,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
               }}
             ></span>
             <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-          </div>
+          </button>
         ))}
       </div>
     </div>

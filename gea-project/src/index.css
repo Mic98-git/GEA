@@ -84,23 +84,30 @@ body {
   left: 5px;
   display: flex;
   flex-direction: column;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .zoom-controls button {
-  margin: 1px;
+  margin: 2px;
   font-size: 20px;
   text-align: center;
-  color: #fff;
+  color: #000000;
   cursor: pointer;
   border: none;
-  background-color: #000000;
+  background-color: #ffffff;
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .zoom-controls button:hover {
-  background-color: #053bff;
+  background-color: deepskyblue;
+}
+
+.resize-map {
+  margin: 0px;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
 }
 
 .legend {
@@ -109,14 +116,14 @@ body {
   justify-content: center;
   background: rgba(170, 170, 170, 0.7);
   padding: 5px;
-  border-radius: 5px;
+  border-radius: 4px;
   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
   position: absolute;
   bottom: 5px;
   left: 0;
   right: 0;
   margin: 0 auto;
-  width: fit-content; /* or a fixed width if preferred */
+  width: fit-content;
   z-index: 10;
 }
 
@@ -124,6 +131,9 @@ body {
   display: flex;
   align-items: center;
   margin-right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .legend-circle,
@@ -167,7 +177,7 @@ body {
   background-color: white;
   padding: 5px;
   border: 0px;
-  border-radius: 8px;
+  border-radius: 4px;
   pointer-events: none;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }

@@ -12,6 +12,7 @@ const magnitudeCategoryColorMap = {
 const TSNEScatterplot = ({ csvUrl }) => {
   const svgRef = useRef();
   const [tSNEData, setTSNEData] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,12 +85,19 @@ const TSNEScatterplot = ({ csvUrl }) => {
       });
   }, [tSNEData]);
 
+  const filterByMagnitude = (magnitudeCategory) => {
+    const svg = d3.select(svgRef.current);
+      svg.selectAll("circle")
+        .attr("opacity", (d) => d.magnitude_category === magnitudeCategory ? 1 : 0.05);
+    setFilter(magnitudeCategory)
+  };
+
   return (
     <div className="scatterplot">
       <svg ref={svgRef}></svg>
       <div className="legend">
       {Object.entries(magnitudeCategoryColorMap).map(([key, color]) => (
-        <div key={key} className="legend-item">
+        <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
           <span
             className="legend-circle"
             style={{
@@ -99,7 +107,7 @@ const TSNEScatterplot = ({ csvUrl }) => {
             }}
           ></span>
           <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        </div>
+        </button>
       ))}
       </div>
     </div>
