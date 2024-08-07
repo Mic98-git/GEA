@@ -27,15 +27,17 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [selectedDepthCategories, setSelectedDepthCategories] = useState([]);
+  const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await d3.json(topojsonUrl).then(function(data) {
+        await d3.json(topojsonUrl).then(data => {
           setTopojsonData(data);
         });
         
-        await d3.json(geojsonUrl).then(function(data) {
+        await d3.json(geojsonUrl).then(data => {
           const geojsonWithAttributes = data.features.map((feature) => {
             const depthCategory = feature.properties.depth_category || "unknown";
             const magnitudeCategory = feature.properties.magnitude_category || "minor";
@@ -111,7 +113,11 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           const color = depthColorMap[depth];
           return color || "#000000";
         })
-        .attr("opacity", 0.5)
+        .attr("opacity", (d) => {
+          const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
+          const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
+          return (depthFilter && magnitudeFilter) ? 1 : 0.05;
+        })
         .on("mouseover", (event, d) => {
           tooltip
             .style("opacity", 1)
@@ -154,7 +160,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
     }
-  }, [topojsonData, geojsonData, crossfilterData, dimensions]);
+  }, [topojsonData, geojsonData, crossfilterData, dimensions, selectedDepthCategories, selectedMagnitudeCategories]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -198,19 +204,17 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   };
 
   const filterByDepth = (depthCategory) => {
-    if (geojsonData) {
-      const svg = d3.select(svgRef.current);
-      svg.selectAll("circle")
-        .attr("opacity", (d) => d.properties.depthCategory === depthCategory ? 1 : 0.05);
-    }
+    const updatedCategories = selectedDepthCategories.includes(depthCategory)
+      ? selectedDepthCategories.filter(category => category !== depthCategory)
+      : [...selectedDepthCategories, depthCategory];
+    setSelectedDepthCategories(updatedCategories);
   };
 
   const filterByMagnitude = (magnitudeCategory) => {
-    if (geojsonData) {
-      const svg = d3.select(svgRef.current);
-      svg.selectAll("circle")
-        .attr("opacity", (d) => d.properties.magnitudeCategory === magnitudeCategory ? 1 : 0.05);
-    }
+    const updatedCategories = selectedMagnitudeCategories.includes(magnitudeCategory)
+      ? selectedMagnitudeCategories.filter(category => category !== magnitudeCategory)
+      : [...selectedMagnitudeCategories, magnitudeCategory];
+    setSelectedMagnitudeCategories(updatedCategories);
   };
 
   return (
@@ -230,6 +234,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
             <span
               className="legend-square"
               style={{
+                opacity: selectedDepthCategories.length > 0 && !selectedDepthCategories.includes(key) ? 0.2 : 1,
                 background: color,
                 width: 8,
                 height: 8,
@@ -243,6 +248,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
             <span
               className="legend-circle"
               style={{
+                opacity: selectedMagnitudeCategories.length > 0 && !selectedMagnitudeCategories.includes(key) ? 0.2 : 1,
                 background: '#555',
                 width: size * 2,
                 height: size * 2,
