@@ -117,6 +117,7 @@ const TSNEScatterplot = ({ csvUrl }) => {
           <span
             className="legend-circle"
             style={{
+              opacity: selectedCategories.length > 0 && !selectedCategories.includes(key) ? 0.2 : 1,
               background: color,
               width: 8,
               height: 8,
