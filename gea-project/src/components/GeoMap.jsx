@@ -123,10 +123,9 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
             .style("opacity", 1)
             .html(`
               <strong>Location:</strong> ${d.properties.place}<br>
-              <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag}<br>
-              <strong>Depth:</strong> ${d.properties.depth} km<br>
-              <strong>Latitude:</strong> ${d.geometry.coordinates[1].toFixed(2)}°<br>
-              <strong>Longitude:</strong> ${d.geometry.coordinates[0].toFixed(2)}°<br>             
+              <strong>Time (UTC):</strong> ${d.properties.time}<br>
+              <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
+              <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
               <strong>Nearest station:</strong> ${d.properties.dmin} km
             `)
             .style("left", `${event.pageX + 10}px`)
@@ -138,7 +137,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
 
       const zoomBehavior = d3
         .zoom()
-        .scaleExtent([0.5, 10])
+        .scaleExtent([0.5, 30])
         .translateExtent([
           [-panPadding, -panPadding], 
           [width + panPadding, height + panPadding]
@@ -194,7 +193,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
     }
   };
 
-  const resizeMap = () => {
+  const recenterMap = () => {
     if (zoomRef.current && initialTransformRef.current) {
       d3.select(svgRef.current)
         .transition()
@@ -223,7 +222,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       <div className="zoom-controls">
         <button onClick={zoomIn} title="Zoom in">+</button>
         <button onClick={zoomOut} title="Zoom out">-</button>
-        <button onClick={resizeMap} title="Recenter Map">
+        <button onClick={recenterMap} title="Recenter">
           <img src={crosshairIcon} className="resize-map"/>
         </button>
       </div>

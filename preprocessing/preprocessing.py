@@ -14,6 +14,9 @@ df.dropna(inplace=True)
 df.drop(['nst', 'gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
 df = df.iloc[15000:20000, :]
 
+# Reformat time column
+df['time'] = pd.to_datetime(df['time'], utc=True).dt.strftime('%Y-%m-%d %H:%M:%S')
+
 # Month and week preprocessing
 months = []
 weeks = []
