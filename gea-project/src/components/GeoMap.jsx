@@ -36,7 +36,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         await d3.json(topojsonUrl).then(data => {
           setTopojsonData(data);
         });
-        
+
         await d3.json(geojsonUrl).then(data => {
           const geojsonWithAttributes = data.features.map((feature) => {
             const depthCategory = feature.properties.depth_category || "unknown";
@@ -139,7 +139,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         .zoom()
         .scaleExtent([0.5, 30])
         .translateExtent([
-          [-panPadding, -panPadding], 
+          [-panPadding, -panPadding],
           [width + panPadding, height + panPadding]
         ])
         .on("zoom", (event) => {
@@ -223,40 +223,45 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
         <button onClick={zoomIn} title="Zoom in">+</button>
         <button onClick={zoomOut} title="Zoom out">-</button>
         <button onClick={recenterMap} title="Recenter">
-          <img src={crosshairIcon} className="resize-map"/>
+          <img src={crosshairIcon} className="resize-map" />
         </button>
       </div>
       <div ref={tooltipRef} className="tooltip"></div>
-      <div className="legend">
-        {Object.entries(depthColorMap).map(([key, color]) => (
-          <button key={key} className="legend-item" onClick={() => filterByDepth(key)}>
-            <span
-              className="legend-square"
-              style={{
-                opacity: selectedDepthCategories.length > 0 && !selectedDepthCategories.includes(key) ? 0.2 : 1,
-                background: color,
-                width: 8,
-                height: 8,
-              }}
-            ></span>
-            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-          </button>
-        ))}
-        {Object.entries(magnitudeSizeMap).map(([key, size]) => (
-          <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
-            <span
-              className="legend-circle"
-              style={{
-                opacity: selectedMagnitudeCategories.length > 0 && !selectedMagnitudeCategories.includes(key) ? 0.2 : 1,
-                background: '#555',
-                width: size * 2,
-                height: size * 2,
-              }}
-            ></span>
-            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-          </button>
-        ))}
+      <div className="legend-container">
+        <div className="legend">
+          {Object.entries(depthColorMap).map(([key, color]) => (
+            <button key={key} className="legend-item" onClick={() => filterByDepth(key)}>
+              <span
+                className="legend-square"
+                style={{
+                  opacity: selectedDepthCategories.length > 0 && !selectedDepthCategories.includes(key) ? 0.2 : 1,
+                  background: color,
+                  width: 8,
+                  height: 8,
+                }}
+              ></span>
+              <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+            </button>
+          ))}
+        </div>
+        <div className="legend">
+          {Object.entries(magnitudeSizeMap).map(([key, size]) => (
+            <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
+              <span
+                className="legend-circle"
+                style={{
+                  opacity: selectedMagnitudeCategories.length > 0 && !selectedMagnitudeCategories.includes(key) ? 0.2 : 1,
+                  background: '#555',
+                  width: size * 2,
+                  height: size * 2,
+                }}
+              ></span>
+              <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+            </button>
+          ))}
+        </div>
       </div>
+
     </div>
   );
 };
