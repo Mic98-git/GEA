@@ -87,9 +87,25 @@ const TSNEScatterplot = ({ csvUrl }) => {
 
   const filterByMagnitude = (magnitudeCategory) => {
     const svg = d3.select(svgRef.current);
-      svg.selectAll("circle")
-        .attr("opacity", (d) => d.magnitude_category === magnitudeCategory ? 1 : 0.05);
-    setFilter(magnitudeCategory)
+    if (selectedCategories.includes(magnitudeCategory)) {
+      // Deselect category
+      const updatedCategories = selectedCategories.filter(category => category !== magnitudeCategory);
+      setSelectedCategories(updatedCategories);
+      if (updatedCategories.length === 0) {
+        svg.selectAll("circle").attr("opacity", 1);
+      } else {
+        svg.selectAll("circle").attr("opacity", (d) =>
+          updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
+        );
+      }
+    } else {
+      // Select category
+      const updatedCategories = [...selectedCategories, magnitudeCategory];
+      setSelectedCategories(updatedCategories);
+      svg.selectAll("circle").attr("opacity", (d) =>
+        updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
+      );
+    }
   };
 
   return (
