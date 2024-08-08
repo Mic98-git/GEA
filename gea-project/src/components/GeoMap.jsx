@@ -119,17 +119,22 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           return (depthFilter && magnitudeFilter) ? 1 : 0.05;
         })
         .on("mouseover", (event, d) => {
-          tooltip
-            .style("opacity", 1)
-            .html(`
-              <strong>Location:</strong> ${d.properties.place}<br>
-              <strong>Time (UTC):</strong> ${d.properties.time}<br>
-              <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
-              <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
-              <strong>Nearest station:</strong> ${d.properties.dmin} km
-            `)
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY - 28}px`);
+          const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
+          const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
+
+          if (depthFilter && magnitudeFilter) {
+            tooltip
+              .style("opacity", 1)
+              .html(`
+          <strong>Location:</strong> ${d.properties.place}<br>
+          <strong>Time (UTC):</strong> ${d.properties.time}<br>
+          <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
+          <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
+          <strong>Nearest station:</strong> ${d.properties.dmin} km
+        `)
+              .style("left", `${event.pageX + 10}px`)
+              .style("top", `${event.pageY - 28}px`);
+          }
         })
         .on("mouseout", () => {
           tooltip.style("opacity", 0);
