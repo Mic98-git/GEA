@@ -159,6 +159,14 @@ body {
   margin-left: 2px;
 }
 
+.legend-title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-right: 5px;
+  display: flex;
+  align-items: center;
+}
+
 .weekLabel,
 .monthLabel {
   font-size: 15px;

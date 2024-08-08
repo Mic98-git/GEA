@@ -229,6 +229,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       <div ref={tooltipRef} className="tooltip"></div>
       <div className="legend-container">
         <div className="legend">
+          <span className="legend-title">Depth:</span>
           {Object.entries(depthColorMap).map(([key, color]) => (
             <button key={key} className="legend-item" onClick={() => filterByDepth(key)}>
               <span
@@ -245,6 +246,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           ))}
         </div>
         <div className="legend">
+          <span className="legend-title">Magnitude:</span>
           {Object.entries(magnitudeSizeMap).map(([key, size]) => (
             <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
               <span

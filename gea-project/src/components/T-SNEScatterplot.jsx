@@ -112,6 +112,7 @@ const TSNEScatterplot = ({ csvUrl }) => {
     <div className="scatterplot">
       <svg ref={svgRef}></svg>
       <div className="legend-container legend">
+        <span className="legend-title">Magnitude:</span>
       {Object.entries(magnitudeCategoryColorMap).map(([key, color]) => (
         <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
           <span
