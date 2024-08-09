@@ -2,10 +2,18 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const ParallelCoordinates = ({ csvUrl }) => {
-  const dimensions = ["magSource", "magType", "type", "depth_category"];
+  const dimensions = ["magSource", "magType", "type", "dmin_category"];
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState({});
+
+  // Custom y-axis labels mapping
+  const yAxisLabels = {
+    magSource: "Magnitude Source",
+    magType: "Magnitude Type",
+    type: "Event Type",
+    dmin_category: "Epicenter Nearest station",
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,7 +53,7 @@ const ParallelCoordinates = ({ csvUrl }) => {
 
     const x = d3.scalePoint()
       .range([margin.left, width - margin.right])
-      .padding(1)
+      .padding(0.5)
       .domain(dimensions);
 
     const y = {};
@@ -67,7 +75,8 @@ const ParallelCoordinates = ({ csvUrl }) => {
       .append("path")
       .attr("d", path)
       .style("fill", "none")
-      .style("stroke", "steelblue");
+      .style("stroke", "steelblue")
+      .style("stroke-width", "2px");
 
     const axis = svg.selectAll("g.axis")
       .data(dimensions)
@@ -82,13 +91,14 @@ const ParallelCoordinates = ({ csvUrl }) => {
     axis.append("text")
       .style("text-anchor", "middle")
       .attr("y", margin.top - 25)
-      .text(d => d)
+      .text(d => yAxisLabels[d])
       .style("fill", "white")
-      .style("font-size", "15px");
+      .style("font-size", "14px")
+      .style("font-weight", "bold");
 
     axis.selectAll(".tick text")
       .style("fill", "white")
-      .style("font-size", "12px");
+      .style("font-size", "11px");
 
     axis.selectAll("path, line")
       .style("stroke", "white");

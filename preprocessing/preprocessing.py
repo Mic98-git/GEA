@@ -38,6 +38,19 @@ for elem in time:
 df.insert(0, 'month', months)
 df.insert(1, 'week', weeks)
 
+#dmin category preprocessing
+def categorize_dmin(dmin):
+    if dmin <= 10:
+        return '0-10'
+    elif 10 < dmin <= 20:
+        return '10-20'
+    elif 20 < dmin <= 30:
+        return '20-30'
+    elif 30 < dmin < 40:
+        return '30-40'
+    else:
+        return '40-50'
+
 # Depth and magnitude categories preprocessing
 def categorize_depth(depth):
     if depth < 70:
@@ -59,6 +72,7 @@ def categorize_magnitude(magnitude):
     elif 7.0 <= magnitude < 8.0:
         return 'major'
 
+df['dmin_category'] = df['dmin'].apply(categorize_dmin)
 df['depth_category'] = df['depth'].apply(categorize_depth)
 df['magnitude_category'] = df['mag'].apply(categorize_magnitude)
 
@@ -76,29 +90,25 @@ gdf.to_file("../gea-project/public/eq_coordinates.geojson", driver="GeoJSON")
 ## Parallel coordinates encoding and preprocessing
 le_magnitude_type = LabelEncoder()
 le_seismic_event = LabelEncoder()
-le_reporting_location_source = LabelEncoder()
 le_reporting_magnitude_source = LabelEncoder()
-le_depth_category = LabelEncoder()
+le_dmin = LabelEncoder()
 
 # Fit and transform the data
 magnitude_type_encoded = le_magnitude_type.fit_transform(df['magType'])
 seismic_event_encoded = le_seismic_event.fit_transform(df['type'])
-reporting_location_source_encoded = le_reporting_location_source.fit_transform(df['locationSource'])
 reporting_magnitude_source_encoded = le_reporting_magnitude_source.fit_transform(df['magSource'])
-depth_category_encoded = le_depth_category.fit_transform(df['depth_category'])
+dmin_encoded = le_dmin.fit_transform(df['dmin_category'])
 
 # Create encoding dictionaries
 magnitude_type_mapping = {value: code for value, code in zip(le_magnitude_type.classes_, le_magnitude_type.transform(le_magnitude_type.classes_))}
 seismic_event_mapping = {value: code for value, code in zip(le_seismic_event.classes_, le_seismic_event.transform(le_seismic_event.classes_))}
-reporting_location_source_mapping  = {value: code for value, code in zip(le_reporting_location_source.classes_, le_reporting_location_source.transform(le_reporting_location_source.classes_))}
 reporting_magnitude_source_mapping  = {value: code for value, code in zip(le_reporting_magnitude_source.classes_, le_reporting_magnitude_source.transform(le_reporting_magnitude_source.classes_))}
-depth_category_mapping = {value: code for value, code in zip(le_depth_category.classes_, le_depth_category.transform(le_depth_category.classes_))}
+dmin_mapping  = {value: code for value, code in zip(le_dmin.classes_, le_dmin.transform(le_dmin.classes_))}
 
 df['magType'] = df['magType'].map(lambda x: f"{x}: {magnitude_type_mapping[x]}")
 df['type'] = df['type'].map(lambda x: f"{x}: {seismic_event_mapping[x]}")
-df['locationSource'] = df['locationSource'].map(lambda x: f"{x}: {reporting_location_source_mapping[x]}")
 df['magSource'] = df['magSource'].map(lambda x: f"{x}: {reporting_magnitude_source_mapping[x]}")
-df['depth_category'] = df['depth_category'].map(lambda x: f"{x}: {depth_category_mapping[x]}")
+df['dmin_category'] = df['dmin_category'].map(lambda x: f"{x}: {dmin_mapping[x]}")
 
 ## t-SNE dimensionality reduction
 df['magType_encoded'] = df['magType'].apply(lambda x: int(x.split(': ')[1]))

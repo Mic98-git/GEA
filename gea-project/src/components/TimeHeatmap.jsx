@@ -81,11 +81,13 @@ const TimeHeatmap = ({ csvUrl }) => {
 
     const updateCellColors = () => {
       g.selectAll("rect")
-        .attr("fill", (d, i) => {
-          const isSelected = selectedData.some(
-            (cell) => cell.index === i
-          );
-          return isSelected ? d3.interpolateBlues(0.7) : colorScale(d);
+        .attr("stroke", (d, i) => {
+          const isSelected = selectedData.some((cell) => cell.index === i);
+          return isSelected ? "black" : "none"; // Add a black stroke to selected cells
+        })
+        .attr("stroke-width", (d, i) => {
+          const isSelected = selectedData.some((cell) => cell.index === i);
+          return isSelected ? 3 : 0; // Set stroke width for selected cells
         });
     };
 
