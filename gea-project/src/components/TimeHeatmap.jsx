@@ -4,6 +4,7 @@ import * as d3 from "d3";
 const TimeHeatmap = ({ csvUrl }) => {
   const svgRef = useRef();
   const [data, setData] = useState([]);
+  const [selectedData, setSelectedData] = useState([]);
   const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
   const months = [
     "Jan",
@@ -76,7 +77,17 @@ const TimeHeatmap = ({ csvUrl }) => {
 
     const tooltip = d3.select("body").append("div")
       .attr("class", "tooltip")
-      .style("opacity", 0);  
+      .style("opacity", 0);
+
+    const updateCellColors = () => {
+      g.selectAll("rect")
+        .attr("fill", (d, i) => {
+          const isSelected = selectedData.some(
+            (cell) => cell.index === i
+          );
+          return isSelected ? d3.interpolateBlues(0.7) : colorScale(d);
+        });
+    };
 
     g.selectAll("rect")
       .data(data.flat())
@@ -87,15 +98,34 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("width", cellWidth)
       .attr("height", cellHeight)
       .attr("fill", (d) => colorScale(d))
-      .on("mouseover", function(event, d) {
+      .on("mouseover", function (event, d) {
         tooltip.style("opacity", 1);
         tooltip.html(`<strong>Events:</strong> ${d}`)
           .style("left", (event.pageX + 5) + "px")
           .style("top", (event.pageY - 28) + "px");
       })
-      .on("mouseout", function(d) {
+      .on("mouseout", function () {
         tooltip.style("opacity", 0);
-      }),
+      })
+      .on("click", function () {
+        const rect = d3.select(this);
+        const index = g.selectAll("rect").nodes().indexOf(rect.node());
+
+        const month = months[index % months.length];
+        const week = weeks[Math.floor(index / months.length)];
+        const cellData = { index, month, week };
+
+        setSelectedData((prevSelected) => {
+          const alreadySelected = prevSelected.some(cell => cell.index === index);
+          if (alreadySelected) {
+            return prevSelected.filter(cell => cell.index !== index);
+          } else {
+            return [...prevSelected, cellData];
+          }
+        });
+      });
+
+    updateCellColors();
 
     // Add week labels
     g.selectAll(".weekLabel")
@@ -165,7 +195,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .style("text-anchor", "middle")
       .style("fill", "white")
       .text(d3.max(data.flat()));
-  }, [data]);
+  }, [data, selectedData]);
 
   return (
     <div className="time-heatmap">
