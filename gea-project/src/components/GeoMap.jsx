@@ -23,6 +23,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
   const zoomRef = useRef(null);
   const tooltipRef = useRef(null);
   const initialTransformRef = useRef(null);
+  const currentZoomTransformRef = useRef(d3.zoomIdentity);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
@@ -122,7 +123,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
           const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
 
-          if (depthFilter || magnitudeFilter) {
+          if (depthFilter && magnitudeFilter) {
             tooltip
               .style("opacity", 1)
               .html(`
@@ -148,6 +149,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           [width + panPadding, height + panPadding]
         ])
         .on("zoom", (event) => {
+          currentZoomTransformRef.current = event.transform;  // Update the current zoom transform
           g.attr("transform", event.transform);
           circles.attr("r", (d) => {
             const magnitude = d.properties.magnitudeCategory;
@@ -160,6 +162,9 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       zoomRef.current = zoomBehavior;
 
       initialTransformRef.current = d3.zoomIdentity;
+      g.attr("transform", currentZoomTransformRef.current);
+
+      svg.call(zoomBehavior.transform, currentZoomTransformRef.current);
 
       svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
