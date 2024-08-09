@@ -122,7 +122,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
           const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
 
-          if (depthFilter && magnitudeFilter) {
+          if (depthFilter || magnitudeFilter) {
             tooltip
               .style("opacity", 1)
               .html(`
