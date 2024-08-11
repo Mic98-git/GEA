@@ -53,7 +53,7 @@ const TimeHeatmap = ({ csvUrl }) => {
     const svg = d3.select(svgRef.current);
     const width = svg.node().parentNode.clientWidth;
     const height = svg.node().parentNode.clientHeight;
-    const margin = { top: 80, right: 50, bottom: 50, left: 100 };
+    const margin = { top: 80, right: 50, bottom: 80, left: 100 };
     const cellSpacing = 2;
     const cellWidth = ((width - margin.left - margin.right) / months.length) - cellSpacing;
     const cellHeight = ((height - margin.top - margin.bottom) / weeks.length) - cellSpacing;
@@ -139,7 +139,9 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("x", -margin.left / 3)
       .attr("y", (d, i) => i * (cellHeight + cellSpacing) + cellHeight / 2)
       .attr("dy", ".32em")
-      .style("text-anchor", "middle");
+      .style("text-anchor", "middle")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
     // Add month labels
     g.selectAll(".monthLabel")
@@ -151,7 +153,9 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("x", (d, i) => i * (cellWidth + cellSpacing) + cellWidth / 2)
       .attr("y", -margin.top / 3)
       .attr("dy", ".32em")
-      .style("text-anchor", "middle");
+      .style("text-anchor", "middle")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
     // Add color legend
     const legendHeight = 10;
@@ -183,6 +187,31 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("width", totalCellWidth)
       .attr("height", legendHeight)
       .style("fill", "url(#linear-gradient)");
+
+    const legendScale = d3.scaleLinear()
+      .domain(colorScale.domain())
+      .range([0, totalCellWidth]);
+
+    const legendAxis = d3.axisBottom(legendScale)
+      .tickValues(colorScale.ticks().filter(t => t !== 0))
+      .tickFormat(d3.format(".0f"))
+      .tickSize(legendHeight / 2);
+
+    const axisGroup = svg
+      .append("g")
+      .attr("transform", `translate(${legendX},${legendY + legendHeight})`)
+      .call(legendAxis);
+
+    axisGroup.select(".domain").remove();
+
+    axisGroup.selectAll("line")
+      .style("stroke", "white")
+      .style("stroke-width", "1px")
+      .attr("y2", 4);
+
+    axisGroup.selectAll("text")
+      .style("font-size", "10px")
+      .style("fill", "white");
 
     svg.append("text")
       .attr("x", legendX - 10 * cellSpacing)
