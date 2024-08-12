@@ -6,6 +6,8 @@ const ParallelCoordinates = ({ csvUrl }) => {
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState({});
+  const [brushedData, setBrushedData] = useState([]);
+  const [activeBrushes, setActiveBrushes] = useState({});
 
   // Custom y-axis labels mapping
   const yAxisLabels = {
@@ -20,10 +22,10 @@ const ParallelCoordinates = ({ csvUrl }) => {
       try {
         await d3.csv(csvUrl).then(function (data) {
           const mappings = {};
-          data.forEach(d => {
-            Object.keys(d).forEach(key => {
+          data.forEach((d) => {
+            Object.keys(d).forEach((key) => {
               if (dimensions.includes(key)) {
-                const [category, numericValue] = d[key].split(':');
+                const [category, numericValue] = d[key].split(":");
                 d[key] = parseFloat(numericValue);
 
                 // Create or update the category mapping
@@ -48,27 +50,32 @@ const ParallelCoordinates = ({ csvUrl }) => {
     const height = svg.node().parentNode.clientHeight;
     const margin = { top: 50, right: 30, bottom: 20, left: 30 };
 
-    svg.attr("viewBox", `0 0 ${width} ${height}`)
+    svg
+      .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("preserveAspectRatio", "xMidYMid meet");
 
-    const x = d3.scalePoint()
+    const x = d3
+      .scalePoint()
       .range([margin.left, width - margin.right])
       .padding(0.5)
       .domain(dimensions);
 
     const y = {};
-    dimensions.forEach(column => {
-      y[column] = d3.scaleLinear()
+    dimensions.forEach((column) => {
+      y[column] = d3
+        .scaleLinear()
         .range([height - margin.bottom, margin.top])
-        .domain(d3.extent(data, d => d[column])).nice();
+        .domain(d3.extent(data, (d) => +d[column]))
+        .nice();
     });
 
     const line = d3.line();
-    const path = d => line(dimensions.map(p => [x(p), y[p](d[p])]));
+    const path = (d) => line(dimensions.map((p) => [x(p), y[p](d[p])]));
 
     svg.selectAll("*").remove(); // Clear previous SVG content
 
-    svg.append("g")
+    svg
+      .append("g")
       .selectAll("path")
       .data(data)
       .enter()
@@ -76,33 +83,109 @@ const ParallelCoordinates = ({ csvUrl }) => {
       .attr("d", path)
       .style("fill", "none")
       .style("stroke", "steelblue")
-      .style("stroke-width", "2px");
+      .style("stroke-width", 1.5);
 
-    const axis = svg.selectAll("g.axis")
+    const axis = svg
+      .selectAll("g.axis")
       .data(dimensions)
-      .enter().append("g")
+      .enter()
+      .append("g")
       .attr("class", "axis")
-      .attr("transform", d => `translate(${x(d)})`)
+      .attr("transform", (d) => `translate(${x(d)})`)
       .each(function (d) {
-        d3.select(this).call(d3.axisLeft(y[d])
-          .tickFormat(value => categoryMappings[d] ? categoryMappings[d][value] : value));
+        d3.select(this).call(
+          d3
+            .axisLeft(y[d])
+            .tickFormat((value) =>
+              categoryMappings[d] ? categoryMappings[d][value] : value
+            )
+        );
       });
 
-    axis.append("text")
+    axis
+      .append("text")
       .style("text-anchor", "middle")
       .attr("y", margin.top - 25)
-      .text(d => yAxisLabels[d])
+      .text((d) => yAxisLabels[d])
       .style("fill", "white")
       .style("font-size", "14px")
-      .style("font-weight", "bold");
+      .style("font-weight", "bold")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
-    axis.selectAll(".tick text")
+    axis
+      .selectAll(".tick text")
       .style("fill", "white")
-      .style("font-size", "11px");
+      .style("font-size", "11px")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
-    axis.selectAll("path, line")
-      .style("stroke", "white");
-  }, [data]);
+    axis.selectAll("path, line").style("stroke", "white");
+
+    // Add brushing
+    const brush = d3
+      .brushY()
+      .extent([
+        [-15, margin.top],
+        [15, height - margin.bottom],
+      ])
+      .on("brush", brushed)
+      .on("end", brushEnd);
+
+    axis
+      .append("g")
+      .attr("class", "brush")
+      .each(function (d) {
+        d3.select(this).call(brush);
+      });
+
+    function brushed(event, dimension) {
+      const selection = event.selection;
+      if (selection) {
+        activeBrushes[dimension] = selection.map(y[dimension].invert);
+      } else {
+        delete activeBrushes[dimension];
+      }
+
+      // Filter data based on all active brush selections
+      const brushedData = data.filter((d) => {
+        return Object.keys(activeBrushes).every((dim) => {
+          const [y0, y1] = activeBrushes[dim];
+          const value = +d[dim];
+          return y1 <= value && value <= y0; // Match the filter condition
+        });
+      });
+
+      setBrushedData(brushedData);
+      updatePaths(brushedData);
+    }
+
+    function brushEnd() {
+      if (!Object.keys(activeBrushes).length) {
+        updatePaths(data); // Reset to show all data if no brushes are active
+      }
+    }
+
+    function updatePaths(dataToDisplay) {
+      const updatedPaths = svg.selectAll("path").data(dataToDisplay);
+
+      updatedPaths
+        .attr("d", path)
+        .style("stroke", "steelblue")
+        .style("opacity", 1); // Full opacity for selected paths
+
+      updatedPaths
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .style("fill", "none")
+        .style("stroke", "steelblue")
+        .style("stroke-width", "2px")
+        .style("opacity", 1); // Full opacity for newly entered paths
+
+      updatedPaths.exit().remove(); // Remove paths that are no longer in the data
+    }
+  }, [data, categoryMappings]);
 
   return (
     <div className="parallel-coordinates">

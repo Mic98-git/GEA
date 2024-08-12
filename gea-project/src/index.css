@@ -198,6 +198,12 @@ body {
   box-sizing: border-box;
 }
 
+.parallel-coordinates .brush .selection {
+  fill: #ccc;
+  fill-opacity: 0.3;
+  stroke: #999;
+}
+
 svg {
   display: inline-block;
   vertical-align: middle;
