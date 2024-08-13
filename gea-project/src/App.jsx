@@ -1,6 +1,5 @@
 import './index.css'
 import VisualizationGrid from './components/Grid';
-import Header from './components/Header';
 
 export default function App() {
   return (
