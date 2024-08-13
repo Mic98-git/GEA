@@ -5,43 +5,34 @@ const TimeHeatmap = ({ csvUrl }) => {
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [selectedData, setSelectedData] = useState([]);
+  const [selectedWeeks, setSelectedWeeks] = useState([]);
+  const [selectedMonths, setSelectedMonths] = useState([]);
   const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await d3.csv(csvUrl).then(function (d) {
-          const dataMatrix = Array.from({ length: months.length }, () =>
-            Array(weeks.length).fill(0)
-          );
-          d.forEach((row) => {
-            const monthIndex = +row.month - 1;
-            const weekIndex = +row.week - 1;
-            if (
-              monthIndex >= 0 &&
-              monthIndex < 12 &&
-              weekIndex >= 0 &&
-              weekIndex < 4
-            ) {
-              dataMatrix[monthIndex][weekIndex] += 1;
-            }
-          });
-          setData(dataMatrix);
+        const d = await d3.csv(csvUrl);
+        const dataMatrix = Array.from({ length: months.length }, () =>
+          Array(weeks.length).fill(0)
+        );
+        d.forEach((row) => {
+          const monthIndex = +row.month - 1;
+          const weekIndex = +row.week - 1;
+          if (
+            monthIndex >= 0 &&
+            monthIndex < 12 &&
+            weekIndex >= 0 &&
+            weekIndex < 4
+          ) {
+            dataMatrix[monthIndex][weekIndex] += 1;
+          }
         });
+        setData(dataMatrix);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -82,12 +73,18 @@ const TimeHeatmap = ({ csvUrl }) => {
     const updateCellColors = () => {
       g.selectAll("rect")
         .attr("stroke", (d, i) => {
-          const isSelected = selectedData.some((cell) => cell.index === i);
-          return isSelected ? "black" : "none"; // Add a black stroke to selected cells
+          const colIndex = i % months.length;
+          const rowIndex = Math.floor(i / months.length);
+          const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
+          const isInSelectedMonth = selectedMonths.includes(months[colIndex]);
+          return isInSelectedWeek || isInSelectedMonth ? "black" : "none";
         })
         .attr("stroke-width", (d, i) => {
-          const isSelected = selectedData.some((cell) => cell.index === i);
-          return isSelected ? 3 : 0; // Set stroke width for selected cells
+          const colIndex = i % months.length;
+          const rowIndex = Math.floor(i / months.length);
+          const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
+          const isInSelectedMonth = selectedMonths.includes(months[colIndex]);
+          return isInSelectedWeek || isInSelectedMonth ? 3 : 0;
         });
     };
 
@@ -129,7 +126,7 @@ const TimeHeatmap = ({ csvUrl }) => {
 
     updateCellColors();
 
-    // Add week labels
+    // Add week labels (rows)
     g.selectAll(".weekLabel")
       .data(weeks)
       .enter()
@@ -141,9 +138,41 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("dy", ".32em")
       .style("text-anchor", "middle")
       .style("-webkit-user-select", "none")
-      .style("user-select", "none");
+      .style("user-select", "none")
+      .style("cursor", "pointer")
+      .style("opacity", d => selectedWeeks.length === 0 || selectedWeeks.includes(d) ? 1 : 0.2)
+      .on("click", (event, d) => {
+        const weekIndex = weeks.indexOf(d);
+        const selectedCells = data.flatMap((_, rowIndex) => ({
+          index: weekIndex * months.length + rowIndex, // Row-major order
+          month: months[rowIndex],
+          week: d
+        }));
 
-    // Add month labels
+        setSelectedWeeks(prevSelected => {
+          if (prevSelected.includes(d)) {
+            return prevSelected.filter(week => week !== d);
+          } else {
+            return [...prevSelected, d];
+          }
+        });
+
+        setSelectedData((prevSelected) => {
+          const alreadySelected = selectedCells.every(cell =>
+            prevSelected.some(prev => prev.index === cell.index)
+          );
+
+          if (alreadySelected) {
+            return prevSelected.filter(
+              prev => !selectedCells.some(cell => cell.index === prev.index)
+            );
+          } else {
+            return [...prevSelected, ...selectedCells];
+          }
+        });
+      });
+
+    // Add month labels (columns)
     g.selectAll(".monthLabel")
       .data(months)
       .enter()
@@ -155,9 +184,41 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("dy", ".32em")
       .style("text-anchor", "middle")
       .style("-webkit-user-select", "none")
-      .style("user-select", "none");
+      .style("user-select", "none")
+      .style("cursor", "pointer")
+      .style("opacity", d => selectedMonths.length === 0 || selectedMonths.includes(d) ? 1 : 0.2)
+      .on("click", (event, d) => {
+        const monthIndex = months.indexOf(d);
+        const selectedCells = data.flatMap((_, weekIndex) => ({
+          index: weekIndex * months.length + monthIndex, // Row-major order
+          month: d,
+          week: weeks[weekIndex]
+        }));
 
-    // Add color legend
+        setSelectedMonths(prevSelected => {
+          if (prevSelected.includes(d)) {
+            return prevSelected.filter(month => month !== d);
+          } else {
+            return [...prevSelected, d];
+          }
+        });
+
+        setSelectedData((prevSelected) => {
+          const alreadySelected = selectedCells.every(cell =>
+            prevSelected.some(prev => prev.index === cell.index)
+          );
+
+          if (alreadySelected) {
+            return prevSelected.filter(
+              prev => !selectedCells.some(cell => cell.index === prev.index)
+            );
+          } else {
+            return [...prevSelected, ...selectedCells];
+          }
+        });
+      });
+
+    // Add color legend (same as before)
     const legendHeight = 10;
     const legendX = margin.left;
     const legendY = height - margin.bottom / 2;
@@ -226,7 +287,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .style("text-anchor", "middle")
       .style("fill", "white")
       .text(d3.max(data.flat()));
-  }, [data, selectedData]);
+  }, [data, selectedData, selectedWeeks, selectedMonths]);
 
   return (
     <div className="time-heatmap">
