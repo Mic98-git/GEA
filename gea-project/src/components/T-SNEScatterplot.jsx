@@ -11,6 +11,7 @@ const magnitudeCategoryColorMap = {
 
 const TSNEScatterplot = ({ csvUrl }) => {
   const svgRef = useRef();
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [tSNEData, setTSNEData] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
 
@@ -83,7 +84,21 @@ const TSNEScatterplot = ({ csvUrl }) => {
         const color = magnitudeCategoryColorMap[category];
         return color || "#000000";
       });
-  }, [tSNEData]);
+  }, [tSNEData, dimensions]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (svgRef.current) {
+        const width = svgRef.current.clientWidth;
+        const height = svgRef.current.clientHeight;
+        setDimensions({ width, height });
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const filterByMagnitude = (magnitudeCategory) => {
     const svg = d3.select(svgRef.current);

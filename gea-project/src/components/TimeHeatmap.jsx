@@ -3,6 +3,7 @@ import * as d3 from "d3";
 
 const TimeHeatmap = ({ csvUrl }) => {
   const svgRef = useRef();
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [data, setData] = useState([]);
   const [selectedData, setSelectedData] = useState([]);
   const [selectedWeeks, setSelectedWeeks] = useState([]);
@@ -66,7 +67,9 @@ const TimeHeatmap = ({ csvUrl }) => {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const tooltip = d3.select("body").append("div")
+    const tooltip = d3
+      .select("body")
+      .append("div")
       .attr("class", "tooltip")
       .style("opacity", 0);
 
@@ -77,15 +80,23 @@ const TimeHeatmap = ({ csvUrl }) => {
           const rowIndex = Math.floor(i / months.length);
           const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
           const isInSelectedMonth = selectedMonths.includes(months[colIndex]);
-          return isInSelectedWeek || isInSelectedMonth ? "black" : "none";
+          const isSelectedCell = selectedData.some((cell) => cell.index === i);
+
+          return isInSelectedWeek || isInSelectedMonth || isSelectedCell
+            ? "black"
+            : "none";
         })
         .attr("stroke-width", (d, i) => {
           const colIndex = i % months.length;
           const rowIndex = Math.floor(i / months.length);
           const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
           const isInSelectedMonth = selectedMonths.includes(months[colIndex]);
-          return isInSelectedWeek || isInSelectedMonth ? 3 : 0;
-        });
+          const isSelectedCell = selectedData.some((cell) => cell.index === i);
+
+          return isInSelectedWeek || isInSelectedMonth || isSelectedCell
+            ? 1.5
+            : 0;
+        })
     };
 
     g.selectAll("rect")
@@ -99,9 +110,10 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("fill", (d) => colorScale(d))
       .on("mouseover", function (event, d) {
         tooltip.style("opacity", 1);
-        tooltip.html(`<strong>Events:</strong> ${d}`)
-          .style("left", (event.pageX + 5) + "px")
-          .style("top", (event.pageY - 28) + "px");
+        tooltip
+          .html(`<strong>Events:</strong> ${d}`)
+          .style("left", event.pageX + 5 + "px")
+          .style("top", event.pageY - 28 + "px");
       })
       .on("mouseout", function () {
         tooltip.style("opacity", 0);
@@ -115,9 +127,11 @@ const TimeHeatmap = ({ csvUrl }) => {
         const cellData = { index, month, week };
 
         setSelectedData((prevSelected) => {
-          const alreadySelected = prevSelected.some(cell => cell.index === index);
+          const alreadySelected = prevSelected.some(
+            (cell) => cell.index === index
+          );
           if (alreadySelected) {
-            return prevSelected.filter(cell => cell.index !== index);
+            return prevSelected.filter((cell) => cell.index !== index);
           } else {
             return [...prevSelected, cellData];
           }
@@ -149,22 +163,22 @@ const TimeHeatmap = ({ csvUrl }) => {
           week: d
         }));
 
-        setSelectedWeeks(prevSelected => {
+        setSelectedWeeks((prevSelected) => {
           if (prevSelected.includes(d)) {
-            return prevSelected.filter(week => week !== d);
+            return prevSelected.filter((week) => week !== d);
           } else {
             return [...prevSelected, d];
           }
         });
 
         setSelectedData((prevSelected) => {
-          const alreadySelected = selectedCells.every(cell =>
-            prevSelected.some(prev => prev.index === cell.index)
+          const alreadySelected = selectedCells.every((cell) =>
+            prevSelected.some((prev) => prev.index === cell.index)
           );
 
           if (alreadySelected) {
             return prevSelected.filter(
-              prev => !selectedCells.some(cell => cell.index === prev.index)
+              (prev) => !selectedCells.some((cell) => cell.index === prev.index)
             );
           } else {
             return [...prevSelected, ...selectedCells];
@@ -195,22 +209,22 @@ const TimeHeatmap = ({ csvUrl }) => {
           week: weeks[weekIndex]
         }));
 
-        setSelectedMonths(prevSelected => {
+        setSelectedMonths((prevSelected) => {
           if (prevSelected.includes(d)) {
-            return prevSelected.filter(month => month !== d);
+            return prevSelected.filter((month) => month !== d);
           } else {
             return [...prevSelected, d];
           }
         });
 
         setSelectedData((prevSelected) => {
-          const alreadySelected = selectedCells.every(cell =>
-            prevSelected.some(prev => prev.index === cell.index)
+          const alreadySelected = selectedCells.every((cell) =>
+            prevSelected.some((prev) => prev.index === cell.index)
           );
 
           if (alreadySelected) {
             return prevSelected.filter(
-              prev => !selectedCells.some(cell => cell.index === prev.index)
+              (prev) => !selectedCells.some((cell) => cell.index === prev.index)
             );
           } else {
             return [...prevSelected, ...selectedCells];
@@ -249,12 +263,14 @@ const TimeHeatmap = ({ csvUrl }) => {
       .attr("height", legendHeight)
       .style("fill", "url(#linear-gradient)");
 
-    const legendScale = d3.scaleLinear()
+    const legendScale = d3
+      .scaleLinear()
       .domain(colorScale.domain())
       .range([0, totalCellWidth]);
 
-    const legendAxis = d3.axisBottom(legendScale)
-      .tickValues(colorScale.ticks().filter(t => t !== 0))
+    const legendAxis = d3
+      .axisBottom(legendScale)
+      .tickValues(colorScale.ticks().filter((t) => t !== 0))
       .tickFormat(d3.format(".0f"))
       .tickSize(legendHeight / 2);
 
@@ -265,29 +281,53 @@ const TimeHeatmap = ({ csvUrl }) => {
 
     axisGroup.select(".domain").remove();
 
-    axisGroup.selectAll("line")
+    axisGroup
+      .selectAll("line")
       .style("stroke", "white")
       .style("stroke-width", "1px")
       .attr("y2", 4);
 
-    axisGroup.selectAll("text")
+    axisGroup
+      .selectAll("text")
       .style("font-size", "10px")
-      .style("fill", "white");
+      .style("fill", "white")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
-    svg.append("text")
+    svg
+      .append("text")
       .attr("x", legendX - 10 * cellSpacing)
       .attr("y", legendY + legendHeight)
       .style("text-anchor", "middle")
       .style("fill", "white")
-      .text(0);
+      .text(0)
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
 
-    svg.append("text")
-      .attr("x", (legendX + totalCellWidth) + 12 * cellSpacing)
+    svg
+      .append("text")
+      .attr("x", legendX + totalCellWidth + 12 * cellSpacing)
       .attr("y", legendY + legendHeight)
       .style("text-anchor", "middle")
       .style("fill", "white")
-      .text(d3.max(data.flat()));
-  }, [data, selectedData, selectedWeeks, selectedMonths]);
+      .text(d3.max(data.flat()))
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
+  }, [data, selectedData, selectedWeeks, selectedMonths, dimensions]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (svgRef.current) {
+        const width = svgRef.current.clientWidth;
+        const height = svgRef.current.clientHeight;
+        setDimensions({ width, height });
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <div className="time-heatmap">
