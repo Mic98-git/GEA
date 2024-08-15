@@ -45,164 +45,169 @@ const ParallelCoordinates = ({ csvUrl }) => {
     fetchData();
   }, [csvUrl]);
 
- useEffect(() => {
-  const svg = d3.select(svgRef.current);
-  const width = svg.node().parentNode.clientWidth;
-  const height = svg.node().parentNode.clientHeight;
-  const margin = { top: 50, right: 30, bottom: 20, left: 30 };
+  useEffect(() => {
+    const svg = d3.select(svgRef.current);
+    const width = svg.node().parentNode.clientWidth;
+    const height = svg.node().parentNode.clientHeight;
+    const margin = { top: 50, right: 30, bottom: 20, left: 30 };
 
-  svg
-    .attr("viewBox", `0 0 ${width} ${height}`)
-    .attr("preserveAspectRatio", "xMidYMid meet");
+    svg
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const x = d3
-    .scalePoint()
-    .range([margin.left, width - margin.right])
-    .padding(0.5)
-    .domain(dimensions);
+    const x = d3
+      .scalePoint()
+      .range([margin.left, width - margin.right])
+      .padding(0.5)
+      .domain(dimensions);
 
-  const y = {};
-  dimensions.forEach((column) => {
-    y[column] = d3
-      .scaleLinear()
-      .range([height - margin.bottom, margin.top])
-      .domain(d3.extent(data, (d) => +d[column]))
-      .nice();
-  });
-
-  const line = d3.line();
-  const path = (d) => line(dimensions.map((p) => [x(p), y[p](d[p])]));
-
-  svg.selectAll("*").remove(); // Clear previous SVG content
-
-  svg
-    .append("g")
-    .selectAll("path")
-    .data(data)
-    .enter()
-    .append("path")
-    .attr("d", path)
-    .style("fill", "none")
-    .style("stroke", "steelblue")
-    .style("stroke-width", 1.5);
-
-  const tooltip = d3
-    .select("body")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
-
-  const axis = svg
-    .selectAll("g.axis")
-    .data(dimensions)
-    .enter()
-    .append("g")
-    .attr("class", "axis")
-    .attr("transform", (d) => `translate(${x(d)})`)
-    .each(function (d) {
-      d3.select(this).call(
-        d3
-          .axisLeft(y[d])
-          .tickFormat((value) =>
-            categoryMappings[d] ? categoryMappings[d][value] : value
-          )
-      );
-    })
-    .on("mouseover", function (event, d) {
-      tooltip
-        .style("opacity", 1)
-        .html(`Brush to filter by ${yAxisLabels[d]}`)
-        .style("left", `${event.pageX + 5}px`)
-        .style("top", `${event.pageY - 28}px`);
-    })
-    .on("mouseout", () => {
-      tooltip.style("opacity", 0);
+    const y = {};
+    dimensions.forEach((column) => {
+      y[column] = d3
+        .scaleLinear()
+        .range([height - margin.bottom, margin.top])
+        .domain(d3.extent(data, (d) => +d[column]))
+        .nice();
     });
 
-  axis
-    .append("text")
-    .style("text-anchor", "middle")
-    .attr("y", margin.top - 25)
-    .text((d) => yAxisLabels[d])
-    .style("fill", "white")
-    .style("font-size", "14px")
-    .style("font-weight", "bold")
-    .style("-webkit-user-select", "none")
-    .style("user-select", "none");
+    const line = d3.line();
+    const path = (d) => line(dimensions.map((p) => [x(p), y[p](d[p])]));
 
-  axis
-    .selectAll(".tick text")
-    .style("fill", "white")
-    .style("font-size", "11px")
-    .style("-webkit-user-select", "none")
-    .style("user-select", "none");
+    // Remove previous content
+    svg.selectAll("*").remove();
 
-  axis.selectAll("path, line").style("stroke", "white");
-
-  // Add brushing
-  const brush = d3
-    .brushY()
-    .extent([
-      [-15, margin.top],
-      [15, height - margin.bottom],
-    ])
-    .on("brush", brushed)
-    .on("end", brushEnd);
-
-  axis
-    .append("g")
-    .attr("class", "brush")
-    .each(function (d) {
-      d3.select(this).call(brush);
-    });
-
-  function brushed(event, dimension) {
-    const selection = event.selection;
-    if (selection) {
-      activeBrushes[dimension] = selection.map(y[dimension].invert);
-    } else {
-      delete activeBrushes[dimension];
-    }
-
-    // Filter data based on all active brush selections
-    const brushedData = data.filter((d) => {
-      return Object.keys(activeBrushes).every((dim) => {
-        const [y0, y1] = activeBrushes[dim];
-        const value = +d[dim];
-        return y1 <= value && value <= y0; // Match the filter condition
-      });
-    });
-
-    setBrushedData(brushedData);
-    updatePaths(brushedData);
-  }
-
-  function brushEnd() {
-    if (!Object.keys(activeBrushes).length) {
-      updatePaths(data); // Reset to show all data if no brushes are active
-    }
-  }
-
-  function updatePaths(dataToDisplay) {
-    const updatedPaths = svg.selectAll("path").data(dataToDisplay);
-
-    updatedPaths
-      .attr("d", path)
-      .style("stroke", "steelblue")
-      .style("opacity", 1); // Full opacity for selected paths
-
-    updatedPaths
+    // Draw paths in a separate group
+    const pathGroup = svg.append("g").attr("class", "paths");
+    pathGroup
+      .selectAll("path")
+      .data(data)
       .enter()
       .append("path")
       .attr("d", path)
       .style("fill", "none")
       .style("stroke", "steelblue")
-      .style("stroke-width", "2px")
-      .style("opacity", 1); // Full opacity for newly entered paths
+      .style("stroke-width", 1.5);
 
-    updatedPaths.exit().remove(); // Remove paths that are no longer in the data
-  }
-}, [data, categoryMappings, dim]);
+    // Draw axes in a separate group that remains on top
+    const axisGroup = svg.append("g").attr("class", "axes");
+
+    const tooltip = d3
+      .select("body")
+      .append("div")
+      .attr("class", "tooltip")
+      .style("opacity", 0);
+
+    const axis = axisGroup
+      .selectAll("g.axis")
+      .data(dimensions)
+      .enter()
+      .append("g")
+      .attr("class", "axis")
+      .attr("transform", (d) => `translate(${x(d)})`)
+      .each(function (d) {
+        d3.select(this).call(
+          d3
+            .axisLeft(y[d])
+            .tickFormat((value) =>
+              categoryMappings[d] ? categoryMappings[d][value] : value
+            )
+        );
+      })
+      .on("mouseover", function (event, d) {
+        tooltip
+          .style("opacity", 1)
+          .html(`Brush to filter by ${yAxisLabels[d]}`)
+          .style("left", `${event.pageX + 5}px`)
+          .style("top", `${event.pageY - 28}px`);
+      })
+      .on("mouseout", () => {
+        tooltip.style("opacity", 0);
+      });
+
+    // Add axis labels
+    axis
+      .append("text")
+      .style("text-anchor", "middle")
+      .attr("y", margin.top - 25)
+      .text((d) => yAxisLabels[d])
+      .style("fill", "white")
+      .style("font-size", "14px")
+      .style("font-weight", "bold")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
+
+    axis
+      .selectAll(".tick text")
+      .style("fill", "white")
+      .style("font-size", "11px")
+      .style("-webkit-user-select", "none")
+      .style("user-select", "none");
+
+    axis.selectAll("path, line").style("stroke", "white");
+
+    // Add brushing
+    const brush = d3
+      .brushY()
+      .extent([
+        [-15, margin.top],
+        [15, height - margin.bottom],
+      ])
+      .on("brush", brushed)
+      .on("end", brushEnd);
+
+    axis
+      .append("g")
+      .attr("class", "brush")
+      .each(function (d) {
+        d3.select(this).call(brush);
+      });
+
+    function brushed(event, dimension) {
+      const selection = event.selection;
+      if (selection) {
+        activeBrushes[dimension] = selection.map(y[dimension].invert);
+      } else {
+        delete activeBrushes[dimension];
+      }
+
+      const brushedData = data.filter((d) => {
+        return Object.keys(activeBrushes).every((dim) => {
+          const [y0, y1] = activeBrushes[dim];
+          const value = +d[dim];
+          return y1 <= value && value <= y0;
+        });
+      });
+
+      setBrushedData(brushedData);
+      updatePaths(brushedData);
+    }
+
+    function brushEnd() {
+      if (!Object.keys(activeBrushes).length) {
+        updatePaths(data);
+      }
+    }
+
+    function updatePaths(dataToDisplay) {
+      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
+
+      updatedPaths
+        .attr("d", path)
+        .style("stroke", "steelblue")
+        .style("opacity", 1);
+
+      updatedPaths
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .style("fill", "none")
+        .style("stroke", "steelblue")
+        .style("stroke-width", "2px")
+        .style("opacity", 1);
+
+      updatedPaths.exit().remove();
+    }
+  }, [data, categoryMappings, dim]);
 
   useEffect(() => {
     const handleResize = () => {
