@@ -157,32 +157,31 @@ const TimeHeatmap = ({ csvUrl }) => {
       .style("opacity", d => selectedWeeks.length === 0 || selectedWeeks.includes(d) ? 1 : 0.2)
       .on("click", (event, d) => {
         const weekIndex = weeks.indexOf(d);
-        const selectedCells = data.flatMap((_, rowIndex) => ({
-          index: weekIndex * months.length + rowIndex, // Row-major order
-          month: months[rowIndex],
-          week: d
-        }));
 
         setSelectedWeeks((prevSelected) => {
-          if (prevSelected.includes(d)) {
-            return prevSelected.filter((week) => week !== d);
-          } else {
-            return [...prevSelected, d];
-          }
-        });
+          const newSelectedWeeks = prevSelected.includes(d)
+            ? prevSelected.filter((week) => week !== d)
+            : [...prevSelected, d];
 
-        setSelectedData((prevSelected) => {
-          const alreadySelected = selectedCells.every((cell) =>
-            prevSelected.some((prev) => prev.index === cell.index)
-          );
+          const newSelectedData = data.flatMap((_, rowIndex) => {
+            const cellIndex = weekIndex * months.length + rowIndex;
 
-          if (alreadySelected) {
-            return prevSelected.filter(
-              (prev) => !selectedCells.some((cell) => cell.index === prev.index)
-            );
-          } else {
-            return [...prevSelected, ...selectedCells];
-          }
+            const isInSelectedMonth = selectedMonths.includes(months[rowIndex]);
+
+            // Add to selectedData only if it is in the selected week and either it was not
+            // previously selected or it is still in the selected months.
+            if (
+              newSelectedWeeks.includes(d) ||
+              isInSelectedMonth
+            ) {
+              return { index: cellIndex, month: months[rowIndex], week: d };
+            }
+
+            return [];
+          });
+
+          setSelectedData(newSelectedData);
+          return newSelectedWeeks;
         });
       });
 
@@ -203,32 +202,31 @@ const TimeHeatmap = ({ csvUrl }) => {
       .style("opacity", d => selectedMonths.length === 0 || selectedMonths.includes(d) ? 1 : 0.2)
       .on("click", (event, d) => {
         const monthIndex = months.indexOf(d);
-        const selectedCells = data.flatMap((_, weekIndex) => ({
-          index: weekIndex * months.length + monthIndex, // Row-major order
-          month: d,
-          week: weeks[weekIndex]
-        }));
 
         setSelectedMonths((prevSelected) => {
-          if (prevSelected.includes(d)) {
-            return prevSelected.filter((month) => month !== d);
-          } else {
-            return [...prevSelected, d];
-          }
-        });
+          const newSelectedMonths = prevSelected.includes(d)
+            ? prevSelected.filter((month) => month !== d)
+            : [...prevSelected, d];
 
-        setSelectedData((prevSelected) => {
-          const alreadySelected = selectedCells.every((cell) =>
-            prevSelected.some((prev) => prev.index === cell.index)
-          );
+          const newSelectedData = data.flatMap((_, weekIndex) => {
+            const cellIndex = weekIndex * months.length + monthIndex;
 
-          if (alreadySelected) {
-            return prevSelected.filter(
-              (prev) => !selectedCells.some((cell) => cell.index === prev.index)
-            );
-          } else {
-            return [...prevSelected, ...selectedCells];
-          }
+            const isInSelectedWeek = selectedWeeks.includes(weeks[weekIndex]);
+
+            // Add to selectedData only if it is in the selected month and either it was not
+            // previously selected or it is still in the selected weeks.
+            if (
+              newSelectedMonths.includes(d) ||
+              isInSelectedWeek
+            ) {
+              return { index: cellIndex, month: d, week: weeks[weekIndex] };
+            }
+
+            return [];
+          });
+
+          setSelectedData(newSelectedData);
+          return newSelectedMonths;
         });
       });
 
