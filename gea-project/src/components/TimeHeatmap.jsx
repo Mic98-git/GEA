@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
-const TimeHeatmap = ({ csvUrl }) => {
+const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [data, setData] = useState([]);
@@ -311,7 +311,7 @@ const TimeHeatmap = ({ csvUrl }) => {
       .text(d3.max(data.flat()))
       .style("-webkit-user-select", "none")
       .style("user-select", "none");
-  }, [data, selectedData, selectedWeeks, selectedMonths, dimensions]);
+  }, [data, selectedData, selectedWeeks, selectedMonths, dimensions, filteredEarthquakeIds]);
 
   useEffect(() => {
     const handleResize = () => {

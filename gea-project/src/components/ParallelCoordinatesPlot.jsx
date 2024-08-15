@@ -1,14 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
-const ParallelCoordinates = ({ csvUrl }) => {
+const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const dimensions = ["magSource", "magType", "type", "dmin_category"];
   const svgRef = useRef();
   const [dim, setDim] = useState({ width: 800, height: 600 });
   const [data, setData] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState({});
-  const [brushedData, setBrushedData] = useState([]);
-  const [activeBrushes, setActiveBrushes] = useState({});
+  const activeBrushes = {};
 
   // Custom y-axis labels mapping
   const yAxisLabels = {
@@ -78,17 +77,28 @@ const ParallelCoordinates = ({ csvUrl }) => {
 
     // Draw paths in a separate group
     const pathGroup = svg.append("g").attr("class", "paths");
-    pathGroup
-      .selectAll("path")
-      .data(data)
-      .enter()
-      .append("path")
-      .attr("d", path)
-      .style("fill", "none")
-      .style("stroke", "steelblue")
-      .style("stroke-width", 1.5);
 
-    // Draw axes in a separate group that remains on top
+    function updatePaths(dataToDisplay) {
+      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
+
+      updatedPaths
+        .attr("d", path)
+        .style("stroke", "steelblue")
+        .style("opacity", 1);
+
+      updatedPaths
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .style("fill", "none")
+        .style("stroke", "steelblue")
+        .style("stroke-width", 1.5)
+        .style("opacity", 1);
+
+      updatedPaths.exit().remove();
+    }
+
+    // Draw axes
     const axisGroup = svg.append("g").attr("class", "axes");
 
     const tooltip = d3
@@ -177,8 +187,6 @@ const ParallelCoordinates = ({ csvUrl }) => {
           return y1 <= value && value <= y0;
         });
       });
-
-      setBrushedData(brushedData);
       updatePaths(brushedData);
     }
 
@@ -188,26 +196,13 @@ const ParallelCoordinates = ({ csvUrl }) => {
       }
     }
 
-    function updatePaths(dataToDisplay) {
-      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
+    // Apply the filtered IDs from the parent component
+    const filteredData = data.filter((d) =>
+      filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d["id"])
+    );
 
-      updatedPaths
-        .attr("d", path)
-        .style("stroke", "steelblue")
-        .style("opacity", 1);
-
-      updatedPaths
-        .enter()
-        .append("path")
-        .attr("d", path)
-        .style("fill", "none")
-        .style("stroke", "steelblue")
-        .style("stroke-width", "2px")
-        .style("opacity", 1);
-
-      updatedPaths.exit().remove();
-    }
-  }, [data, categoryMappings, dim]);
+    updatePaths(filteredData);
+  }, [data, categoryMappings, dim, filteredEarthquakeIds]);
 
   useEffect(() => {
     const handleResize = () => {

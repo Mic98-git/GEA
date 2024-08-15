@@ -18,7 +18,7 @@ const magnitudeSizeMap = {
   major: 6
 };
 
-const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
+const GeoMap = ({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const zoomRef = useRef(null);
   const tooltipRef = useRef(null);
@@ -169,7 +169,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
     }
-  }, [topojsonData, geojsonData, crossfilterData, dimensions, selectedDepthCategories, selectedMagnitudeCategories]);
+  }, [topojsonData, geojsonData, crossfilterData, dimensions, selectedDepthCategories, selectedMagnitudeCategories, filteredEarthquakeIds]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -217,6 +217,7 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       ? selectedDepthCategories.filter(category => category !== depthCategory)
       : [...selectedDepthCategories, depthCategory];
     setSelectedDepthCategories(updatedCategories);
+    applyFilters(updatedCategories, selectedMagnitudeCategories);
   };
 
   const filterByMagnitude = (magnitudeCategory) => {
@@ -224,6 +225,18 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
       ? selectedMagnitudeCategories.filter(category => category !== magnitudeCategory)
       : [...selectedMagnitudeCategories, magnitudeCategory];
     setSelectedMagnitudeCategories(updatedCategories);
+    applyFilters(selectedDepthCategories, updatedCategories);
+  };
+
+  const applyFilters = (depthCategories, magnitudeCategories) => {
+    const filteredIds = geojsonData.features
+      .filter(feature => 
+        (depthCategories.length === 0 || depthCategories.includes(feature.properties.depthCategory)) &&
+        (magnitudeCategories.length === 0 || magnitudeCategories.includes(feature.properties.magnitudeCategory))
+      )
+      .map(feature => feature.properties.id);
+
+    onFilterChange(filteredIds); // Send the filtered IDs to the parent component
   };
 
   return (
@@ -273,7 +286,6 @@ const GeoMap = ({ topojsonUrl, geojsonUrl }) => {
           ))}
         </div>
       </div>
-
     </div>
   );
 };

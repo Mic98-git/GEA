@@ -9,7 +9,7 @@ const magnitudeCategoryColorMap = {
   major: "purple"
 };
 
-const TSNEScatterplot = ({ csvUrl }) => {
+const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [tSNEData, setTSNEData] = useState([]);
@@ -84,7 +84,7 @@ const TSNEScatterplot = ({ csvUrl }) => {
         const color = magnitudeCategoryColorMap[category];
         return color || "#000000";
       });
-  }, [tSNEData, dimensions]);
+  }, [tSNEData, dimensions, filteredEarthquakeIds]);
 
   useEffect(() => {
     const handleResize = () => {
