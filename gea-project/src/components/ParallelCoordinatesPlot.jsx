@@ -23,6 +23,7 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
         await d3.csv(csvUrl).then(function (data) {
           const mappings = {};
           data.forEach((d) => {
+            d.id = +d.id;
             Object.keys(d).forEach((key) => {
               if (dimensions.includes(key)) {
                 const [category, numericValue] = d[key].split(":");
@@ -200,7 +201,7 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
     const filteredData = data.filter((d) =>
       filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d["id"])
     );
-
+    
     updatePaths(filteredData);
   }, [data, categoryMappings, dim, filteredEarthquakeIds]);
 

@@ -22,6 +22,7 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
           Array(weeks.length).fill(0)
         );
         d.forEach((row) => {
+          d.id = +d.id;
           const monthIndex = +row.month - 1;
           const weekIndex = +row.week - 1;
           if (

@@ -20,6 +20,7 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       try {
         await d3.csv(csvUrl).then(function(data) {
           data.forEach(function(d) {
+            d.id = +d.id;
             d.tsne_x = +d.tsne_x;
             d.tsne_y = +d.tsne_y;
           });
