@@ -104,7 +104,8 @@ body {
 }
 
 .resize-map {
-  margin: 0px;
+  display: flex;
+  margin: auto;
   box-sizing: border-box;
   width: auto;
   height: auto;
@@ -198,6 +199,7 @@ body {
   box-sizing: border-box;
 }
 
+.map .brush .selection,
 .parallel-coordinates .brush .selection {
   fill: #ccc;
   fill-opacity: 0.3;
