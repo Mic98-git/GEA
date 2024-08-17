@@ -124,18 +124,35 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
             )
         );
       })
-      .on("mouseover", function (event, d) {
-        tooltip
-          .style("opacity", 1)
-          .html(`Brush to filter by ${yAxisLabels[d]}`)
-          .style("left", `${event.pageX + 5}px`)
-          .style("top", `${event.pageY - 28}px`);
+      .on("mouseover", function (event, dimension) {
+        // Hide previous tooltip and check for an active brush on this axis
+        tooltip.style("opacity", 0);
+        if (activeBrushes[dimension]) {
+          tooltip
+            .style("opacity", 1)
+            .html(`Click to clear filter on ${yAxisLabels[dimension]}`)
+            .style("left", `${event.pageX + 5}px`)
+            .style("top", `${event.pageY - 28}px`);
+        }
+        else {
+          tooltip
+            .style("opacity", 1)
+            .html(`Brush to filter by ${yAxisLabels[dimension]}`)
+            .style("left", `${event.pageX + 5}px`)
+            .style("top", `${event.pageY - 28}px`);
+        }
       })
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
+      })
+      .on("click", function (event, dimension) {
+        if (activeBrushes[dimension]) {
+          clearBrush(dimension);
+          tooltip.style("opacity", 0);  // Hide tooltip after clearing
+        }
       });
 
-    // Add axis labels
+    // Add axis labels and delete buttons
     axis
       .append("text")
       .style("text-anchor", "middle")
@@ -173,6 +190,16 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
         d3.select(this).call(brush);
       });
 
+    function getFilteredData() {
+      return data.filter((d) => {
+        return Object.keys(activeBrushes).every((dim) => {
+          const [y0, y1] = activeBrushes[dim];
+          const value = +d[dim];
+          return y1 <= value && value <= y0;
+        });
+      });
+    }
+
     function brushed(event, dimension) {
       const selection = event.selection;
       if (selection) {
@@ -181,27 +208,52 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
         delete activeBrushes[dimension];
       }
 
-      const brushedData = data.filter((d) => {
-        return Object.keys(activeBrushes).every((dim) => {
-          const [y0, y1] = activeBrushes[dim];
-          const value = +d[dim];
-          return y1 <= value && value <= y0;
-        });
-      });
-      updatePaths(brushedData);
+      const bData = getFilteredData();
+      updatePaths(bData);
     }
 
     function brushEnd() {
       if (!Object.keys(activeBrushes).length) {
         updatePaths(data);
+        applyFiltersToOthersCharts(data);
+      } else {
+        const filteredData = getFilteredData();
       }
     }
+
+    function clearBrush(dimension) {
+      // Remove the specific dimension from activeBrushes
+      delete activeBrushes[dimension];
+    
+      // Clear the visual brush on the specific dimension
+      axisGroup
+        .select(`.axis:nth-child(${dimensions.indexOf(dimension) + 1}) .brush`)
+        .call(brush.move, null);
+    
+      // Re-apply brushes for remaining dimensions
+      axis.each(function(d) {
+        if (activeBrushes[d]) {
+          d3.select(this).call(brush.move, activeBrushes[d].map(y[d]));
+        }
+      });
+    
+      const bData = getFilteredData();
+      updatePaths(bData);
+    
+      // Apply filters to other charts (if applicable)
+      applyFiltersToOthersCharts(bData);
+    }    
+
+    // Send the filtered IDs to the parent component
+    const applyFiltersToOthersCharts = (filteredData) => {
+      const filteredIds = filteredData.map(d => d["id"]);
+      onFilterChange(filteredIds);
+    };
 
     // Apply the filtered IDs from the parent component
     const filteredData = data.filter((d) =>
       filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d["id"])
     );
-    
     updatePaths(filteredData);
   }, [data, categoryMappings, dim, filteredEarthquakeIds]);
 
