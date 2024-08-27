@@ -14,6 +14,40 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
 
+  const filterData = (filteredWeeks, filteredMonths) => {
+    // If no weeks or months are selected, return the original data
+    if (filteredWeeks.length === 0 && filteredMonths.length === 0) {
+      return data;
+    }
+
+    // Create a copy of the data to manipulate
+    const filteredData = data.map(row => [...row]);
+
+    // If weeks are selected, filter rows (weeks)
+    if (filteredWeeks.length > 0) {
+      const weekIndexes = filteredWeeks.map(week => weeks.indexOf(week));
+      filteredData.forEach((monthData, monthIndex) => {
+        monthData.forEach((_, weekIndex) => {
+          if (!weekIndexes.includes(weekIndex)) {
+            filteredData[monthIndex][weekIndex] = 0; // Set non-selected weeks to 0
+          }
+        });
+      });
+    }
+
+    // If months are selected, filter columns (months)
+    if (filteredMonths.length > 0) {
+      const monthIndexes = filteredMonths.map(month => months.indexOf(month));
+      filteredData.forEach((_, monthIndex) => {
+        if (!monthIndexes.includes(monthIndex)) {
+          filteredData[monthIndex] = Array(weeks.length).fill(0); // Set non-selected months to 0
+        }
+      });
+    }
+
+    return filteredData;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -35,12 +69,13 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
           }
         });
         setData(dataMatrix);
+        setSelectedData(dataMatrix);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, [csvUrl]);
+  }, []);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -58,7 +93,7 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
 
     const colorScale = d3
       .scaleSequential()
-      .domain([0, d3.max(data.flat())])
+      .domain([0, d3.max(selectedData.flat())])
       .interpolator(d3.interpolateOranges);
 
     svg.selectAll("*").remove();
@@ -74,9 +109,9 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       .attr("class", "tooltip")
       .style("opacity", 0);
 
-    const updateCellColors = () => {
+    /*const updateCellStroke = () => {
       g.selectAll("rect")
-        .attr("stroke", (d, i) => {
+        .attr("stroke", (_, i) => {
           const colIndex = i % months.length;
           const rowIndex = Math.floor(i / months.length);
           const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
@@ -87,7 +122,7 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
             ? "black"
             : "none";
         })
-        .attr("stroke-width", (d, i) => {
+        .attr("stroke-width", (_, i) => {
           const colIndex = i % months.length;
           const rowIndex = Math.floor(i / months.length);
           const isInSelectedWeek = selectedWeeks.includes(weeks[rowIndex]);
@@ -98,14 +133,14 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
             ? 1.5
             : 0;
         })
-    };
+    };*/
 
     g.selectAll("rect")
-      .data(data.flat())
+      .data(selectedData.flat())
       .enter()
       .append("rect")
-      .attr("x", (d, i) => (i % months.length) * (cellWidth + cellSpacing))
-      .attr("y", (d, i) => Math.floor(i / months.length) * (cellHeight + cellSpacing))
+      .attr("x", (d, i) => Math.floor(i / weeks.length) * (cellWidth + cellSpacing))
+      .attr("y", (d, i) => (i % weeks.length) * (cellHeight + cellSpacing))
       .attr("width", cellWidth)
       .attr("height", cellHeight)
       .attr("fill", (d) => colorScale(d))
@@ -118,28 +153,26 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       })
       .on("mouseout", function () {
         tooltip.style("opacity", 0);
-      })
-      .on("click", function () {
-        const rect = d3.select(this);
-        const index = g.selectAll("rect").nodes().indexOf(rect.node());
-
-        const month = months[index % months.length];
-        const week = weeks[Math.floor(index / months.length)];
-        const cellData = { index, month, week };
-
-        setSelectedData((prevSelected) => {
-          const alreadySelected = prevSelected.some(
-            (cell) => cell.index === index
-          );
-          if (alreadySelected) {
-            return prevSelected.filter((cell) => cell.index !== index);
-          } else {
-            return [...prevSelected, cellData];
-          }
-        });
       });
+    /*.on("click", function () {
+      const rect = d3.select(this);
+      const index = g.selectAll("rect").nodes().indexOf(rect.node());
 
-    updateCellColors();
+      const month = months[index % months.length];
+      const week = weeks[Math.floor(index / months.length)];
+      const cellData = { index, month, week };
+
+      setSelectedData((prevSelected) => {
+        const alreadySelected = prevSelected.some(
+          (cell) => cell.index === index
+        );
+        if (alreadySelected) {
+          return prevSelected.filter((cell) => cell.index !== index);
+        } else {
+          return [...prevSelected, cellData];
+        }
+      });
+    });*/
 
     // Add week labels (rows)
     g.selectAll(".weekLabel")
@@ -156,32 +189,16 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       .style("user-select", "none")
       .style("cursor", "pointer")
       .style("opacity", d => selectedWeeks.length === 0 || selectedWeeks.includes(d) ? 1 : 0.2)
-      .on("click", (event, d) => {
-        const weekIndex = weeks.indexOf(d);
-
+      .on("click", (_, d) => {
         setSelectedWeeks((prevSelected) => {
           const newSelectedWeeks = prevSelected.includes(d)
             ? prevSelected.filter((week) => week !== d)
             : [...prevSelected, d];
 
-          const newSelectedData = data.flatMap((_, rowIndex) => {
-            const cellIndex = weekIndex * months.length + rowIndex;
+          // Apply the filter to the data
+          const newFilteredData = filterData(newSelectedWeeks, selectedMonths);
+          setSelectedData(newFilteredData);
 
-            const isInSelectedMonth = selectedMonths.includes(months[rowIndex]);
-
-            // Add to selectedData only if it is in the selected week and either it was not
-            // previously selected or it is still in the selected months.
-            if (
-              newSelectedWeeks.includes(d) ||
-              isInSelectedMonth
-            ) {
-              return { index: cellIndex, month: months[rowIndex], week: d };
-            }
-
-            return [];
-          });
-
-          setSelectedData(newSelectedData);
           return newSelectedWeeks;
         });
       });
@@ -201,32 +218,16 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       .style("user-select", "none")
       .style("cursor", "pointer")
       .style("opacity", d => selectedMonths.length === 0 || selectedMonths.includes(d) ? 1 : 0.2)
-      .on("click", (event, d) => {
-        const monthIndex = months.indexOf(d);
-
+      .on("click", (_, d) => {
         setSelectedMonths((prevSelected) => {
           const newSelectedMonths = prevSelected.includes(d)
             ? prevSelected.filter((month) => month !== d)
             : [...prevSelected, d];
 
-          const newSelectedData = data.flatMap((_, weekIndex) => {
-            const cellIndex = weekIndex * months.length + monthIndex;
+          // Apply the filter to the data
+          const newFilteredData = filterData(selectedWeeks, newSelectedMonths);
+          setSelectedData(newFilteredData);
 
-            const isInSelectedWeek = selectedWeeks.includes(weeks[weekIndex]);
-
-            // Add to selectedData only if it is in the selected month and either it was not
-            // previously selected or it is still in the selected weeks.
-            if (
-              newSelectedMonths.includes(d) ||
-              isInSelectedWeek
-            ) {
-              return { index: cellIndex, month: d, week: weeks[weekIndex] };
-            }
-
-            return [];
-          });
-
-          setSelectedData(newSelectedData);
           return newSelectedMonths;
         });
       });
@@ -309,7 +310,7 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       .attr("y", legendY + legendHeight)
       .style("text-anchor", "middle")
       .style("fill", "white")
-      .text(d3.max(data.flat()))
+      .text(d3.max(selectedData.flat()))
       .style("-webkit-user-select", "none")
       .style("user-select", "none");
   }, [data, selectedData, selectedWeeks, selectedMonths, dimensions, filteredEarthquakeIds]);
