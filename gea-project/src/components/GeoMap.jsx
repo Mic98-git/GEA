@@ -124,13 +124,18 @@ const GeoMap = ({
         const brushedIds = bData.map((d) => d.properties.id);
 
         circles.attr("opacity", (d) => {
-          return brushedIds.includes(d.properties.id) ? 1 : 0.2;
+          return brushedIds.includes(d.properties.id) ? 1 : 0.05;
         });
+
+        /*if (selection) {
+          onFilterChange(brushedIds);
+        }*/
       }
 
       function brushEnd(event) {
         if (!event.selection) {
           circles.attr("opacity", 1);
+          onFilterChange([]);
         }
       }
 
@@ -140,17 +145,17 @@ const GeoMap = ({
         .enter()
         .append("circle")
         .attr("cx", (d) => {
-          const [x, y] = projection(d.geometry.coordinates);
+          const [x, _] = projection(d.geometry.coordinates);
           return x;
         })
         .attr("cy", (d) => {
-          const [x, y] = projection(d.geometry.coordinates);
+          const [_, y] = projection(d.geometry.coordinates);
           return y;
         })
         .attr("r", (d) => {
           const magnitude = d.properties.magnitudeCategory;
           const size = magnitudeSizeMap[magnitude];
-          return size || 3;
+          return size ? size / currentZoomTransformRef.current.k : 3;
         })
         .attr("fill", (d) => {
           const depth = d.properties.depthCategory;
@@ -158,32 +163,26 @@ const GeoMap = ({
           return color || "#000000";
         })
         .attr("opacity", (d) => {
-          const depthFilter =
-            selectedDepthCategories.length === 0 ||
-            selectedDepthCategories.includes(d.properties.depthCategory);
-          const magnitudeFilter =
-            selectedMagnitudeCategories.length === 0 ||
-            selectedMagnitudeCategories.includes(
-              d.properties.magnitudeCategory
-            );
-          return depthFilter && magnitudeFilter ? 1 : 0.05;
+          return circleShouldBeHighlighted(d) ? 1 : 0.01;
         })
         .on("mouseover", (event, d) => {
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
-          tooltip
-            .style("opacity", 1)
-            .html(`
+          if (circleShouldBeHighlighted(d)) {
+            tooltip
+              .style("opacity", 1)
+              .html(`
               <strong>Location:</strong> ${d.properties.place}<br>
               <strong>Time (UTC):</strong> ${d.properties.time}<br>
               <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
               <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
               <strong>Nearest station:</strong> ${d.properties.dmin} km
               `
-            )
-            .style("left", `${pageX + 10}px`)
-            .style("top", `${pageY - 28}px`);
+              )
+              .style("left", `${pageX + 10}px`)
+              .style("top", `${pageY - 28}px`);
+          }
         })
         .on("mouseout", () => {
           tooltip.style("opacity", 0);
@@ -199,11 +198,7 @@ const GeoMap = ({
         .on("zoom", (event) => {
           currentZoomTransformRef.current = event.transform; // Update the current zoom transform
           g.attr("transform", event.transform);
-          circles.attr("r", (d) => {
-            const magnitude = d.properties.magnitudeCategory;
-            const size = magnitudeSizeMap[magnitude];
-            return (size || 3) / event.transform.k;
-          });
+          updateCircleSizes(event.transform);
         });
 
       svg.call(zoomBehavior);
@@ -230,6 +225,23 @@ const GeoMap = ({
     selectedMagnitudeCategories,
     filteredEarthquakeIds,
   ]);
+
+  const circleShouldBeHighlighted = (d) => {
+    const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
+    const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
+
+    return depthFilter && magnitudeFilter;
+  }
+
+  const updateCircleSizes = (transform) => {
+    d3.select(svgRef.current)
+      .selectAll("circle")
+      .attr("r", (d) => {
+        const magnitude = d.properties.magnitudeCategory;
+        const size = magnitudeSizeMap[magnitude];
+        return (size || 3) / transform.k;
+      });
+  };
 
   const zoomIn = () => {
     if (zoomRef.current && svgRef.current) {
@@ -309,22 +321,18 @@ const GeoMap = ({
       ? selectedDepthCategories.filter((category) => category !== depthCategory)
       : [...selectedDepthCategories, depthCategory];
     setSelectedDepthCategories(updatedCategories);
-    applyFiltersToOthersCharts(updatedCategories, selectedMagnitudeCategories);
+    applyCategoriesToOthersCharts(updatedCategories, selectedMagnitudeCategories);
   };
 
   const filterByMagnitude = (magnitudeCategory) => {
-    const updatedCategories = selectedMagnitudeCategories.includes(
-      magnitudeCategory
-    )
-      ? selectedMagnitudeCategories.filter(
-        (category) => category !== magnitudeCategory
-      )
+    const updatedCategories = selectedMagnitudeCategories.includes(magnitudeCategory)
+      ? selectedMagnitudeCategories.filter((category) => category !== magnitudeCategory)
       : [...selectedMagnitudeCategories, magnitudeCategory];
     setSelectedMagnitudeCategories(updatedCategories);
-    applyFiltersToOthersCharts(selectedDepthCategories, updatedCategories);
+    applyCategoriesToOthersCharts(selectedDepthCategories, updatedCategories);
   };
 
-  const applyFiltersToOthersCharts = (depthCategories, magnitudeCategories) => {
+  const applyCategoriesToOthersCharts = (depthCategories, magnitudeCategories) => {
     const filteredIds = geojsonData.features
       .filter(
         (feature) =>
@@ -351,16 +359,16 @@ const GeoMap = ({
         <button onClick={recenterMap} title="Recenter">
           <img src={crosshairIcon} className="resize-map" />
         </button>
-        <button onClick={() => panMap(10, 0)} title="Pan left">
+        <button onClick={() => panMap(10, 0)} title="Move left">
           &larr;
         </button>
-        <button onClick={() => panMap(-10, 0)} title="Pan right">
+        <button onClick={() => panMap(-10, 0)} title="Move right">
           &rarr;
         </button>
-        <button onClick={() => panMap(0, 10)} title="Pan up">
+        <button onClick={() => panMap(0, 10)} title="Move up">
           &uarr;
         </button>
-        <button onClick={() => panMap(0, -10)} title="Pan down">
+        <button onClick={() => panMap(0, -10)} title="Move down">
           &darr;
         </button>
       </div>
