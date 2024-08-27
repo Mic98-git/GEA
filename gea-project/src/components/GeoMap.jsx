@@ -36,7 +36,6 @@ const GeoMap = ({
   const [selectedDepthCategories, setSelectedDepthCategories] = useState([]);
   const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
-  const [isBrushing, setIsBrushing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,7 +66,7 @@ const GeoMap = ({
     };
 
     fetchData();
-  }, [topojsonUrl, geojsonUrl]);
+  }, []);
 
   useEffect(() => {
     if (topojsonData && geojsonData && crossfilterData) {
@@ -88,6 +87,44 @@ const GeoMap = ({
       svg.selectAll("*").remove();
 
       const g = svg.append("g");
+
+      // Brush functionality
+      const brush = d3
+        .brush()
+        .extent([
+          [0, 0],
+          [width, height],
+        ])
+        .on("brush", brushed)
+        .on("end", brushEnd);
+
+      g.attr("class", "brush").call(brush)
+
+      function getFilteredData(selection) {
+        if (!selection) return [];
+
+        const [[x0, y0], [x1, y1]] = selection;
+        return geojsonData.features.filter((d) => {
+          const [x, y] = projection(d.geometry.coordinates);
+          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
+        });
+      }
+
+      function brushed(event) {
+        const selection = event.selection;
+        const bData = getFilteredData(selection);
+        const brushedIds = bData.map((d) => d.properties.id);
+
+        circles.attr("opacity", (d) => {
+          return brushedIds.includes(d.properties.id) ? 1 : 0.2;
+        });
+      }
+
+      function brushEnd(event) {
+        if (!event.selection) {
+          circles.attr("opacity", 1);
+        }
+      }
 
       g.selectAll("path")
         .data(worldGeoJson.features)
@@ -132,37 +169,24 @@ const GeoMap = ({
           return depthFilter && magnitudeFilter ? 1 : 0.05;
         })
         .on("mouseover", (event, d) => {
-          if (!isBrushing) {  // Only show tooltip if not brushing
-            const depthFilter =
-              selectedDepthCategories.length === 0 ||
-              selectedDepthCategories.includes(d.properties.depthCategory);
-            const magnitudeFilter =
-              selectedMagnitudeCategories.length === 0 ||
-              selectedMagnitudeCategories.includes(
-                d.properties.magnitudeCategory
-              );
+          event.stopPropagation(); // Prevent brush from triggering
+          const { pageX, pageY } = event;
 
-            if (depthFilter && magnitudeFilter) {
-              tooltip
-                .style("opacity", 1)
-                .html(
-                  `
-                <strong>Location:</strong> ${d.properties.place}<br>
-                <strong>Time (UTC):</strong> ${d.properties.time}<br>
-                <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
-                <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
-                <strong>Nearest station:</strong> ${d.properties.dmin} km
+          tooltip
+            .style("opacity", 1)
+            .html(`
+              <strong>Location:</strong> ${d.properties.place}<br>
+              <strong>Time (UTC):</strong> ${d.properties.time}<br>
+              <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
+              <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
+              <strong>Nearest station:</strong> ${d.properties.dmin} km
               `
-                )
-                .style("left", `${event.pageX + 10}px`)
-                .style("top", `${event.pageY - 28}px`);
-            }
-          }
+            )
+            .style("left", `${pageX + 10}px`)
+            .style("top", `${pageY - 28}px`);
         })
         .on("mouseout", () => {
-          if (!isBrushing) {
-            tooltip.style("opacity", 0);
-          }
+          tooltip.style("opacity", 0);
         });
 
       const zoomBehavior = d3
@@ -196,48 +220,6 @@ const GeoMap = ({
       svg
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
-
-      // Brush functionality
-      const brush = d3
-        .brush()
-        .extent([
-          [0, 0],
-          [width, height],
-        ])
-        .on("start", () => setIsBrushing(true)) 
-        .on("brush", brushed)
-        .on("end", (event) => {
-          setIsBrushing(false);
-          brushEnd(event);
-        });
-
-      svg.append("g").attr("class", "brush").call(brush)
-
-      function getFilteredData(selection) {
-        if (!selection) return [];
-  
-        const [[x0, y0], [x1, y1]] = selection;
-        return geojsonData.features.filter((d) => {
-          const [x, y] = projection(d.geometry.coordinates);
-          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
-        });
-      }
-
-      function brushed(event) {
-        const selection = event.selection;
-        const bData = getFilteredData(selection);
-        const brushedIds = bData.map((d) => d.properties.id);
-        
-        circles.attr("opacity", (d) => {
-          return brushedIds.includes(d.properties.id) ? 1 : 0.2;
-        });
-      }
-  
-      function brushEnd(event) {
-        if (!event.selection) {
-          circles.attr("opacity", 1);
-        }
-      }
     }
   }, [
     topojsonData,
