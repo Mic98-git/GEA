@@ -88,6 +88,14 @@ const GeoMap = ({
 
       const g = svg.append("g");
 
+      g.selectAll("path")
+        .data(worldGeoJson.features)
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", "#cccccc")
+        .attr("stroke", "#333333");
+
       // Brush functionality
       const brush = d3
         .brush()
@@ -125,14 +133,6 @@ const GeoMap = ({
           circles.attr("opacity", 1);
         }
       }
-
-      g.selectAll("path")
-        .data(worldGeoJson.features)
-        .enter()
-        .append("path")
-        .attr("d", path)
-        .attr("fill", "#cccccc")
-        .attr("stroke", "#333333");
 
       const circles = g
         .selectAll("circle")
