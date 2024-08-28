@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, memo } from "react";
 import * as d3 from "d3";
 import { feature } from "topojson-client";
 import crossfilter from "crossfilter2";
@@ -18,17 +18,14 @@ const magnitudeSizeMap = {
   major: 6
 };
 
-const GeoMap = ({
-  topojsonUrl,
-  geojsonUrl,
-  filteredEarthquakeIds,
-  onFilterChange
-}) => {
+const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const zoomRef = useRef(null);
   const tooltipRef = useRef(null);
   const initialTransformRef = useRef(null);
   const currentZoomTransformRef = useRef(d3.zoomIdentity);
+  const brushedIdsRef = useRef([]);
+  const brushSelectionRef = useRef(null);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
@@ -36,6 +33,7 @@ const GeoMap = ({
   const [selectedDepthCategories, setSelectedDepthCategories] = useState([]);
   const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  let isBrushing = false;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,41 +101,17 @@ const GeoMap = ({
           [0, 0],
           [width, height],
         ])
-        .on("brush", brushed)
-        .on("end", brushEnd);
-
-      g.attr("class", "brush").call(brush)
-
-      function getFilteredData(selection) {
-        if (!selection) return [];
-
-        const [[x0, y0], [x1, y1]] = selection;
-        return geojsonData.features.filter((d) => {
-          const [x, y] = projection(d.geometry.coordinates);
-          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
-        });
-      }
-
-      function brushed(event) {
-        const selection = event.selection;
-        const bData = getFilteredData(selection);
-        const brushedIds = bData.map((d) => d.properties.id);
-
-        circles.attr("opacity", (d) => {
-          return brushedIds.includes(d.properties.id) ? 1 : 0.05;
+        .on("start", () => isBrushing = true)
+        .on("brush", (event) => {
+          isBrushing = true;
+          brushed(event)
+        })
+        .on("end", (event) => {
+          isBrushing = false;
+          brushEnd(event);
         });
 
-        /*if (selection) {
-          onFilterChange(brushedIds);
-        }*/
-      }
-
-      function brushEnd(event) {
-        if (!event.selection) {
-          circles.attr("opacity", 1);
-          onFilterChange([]);
-        }
-      }
+      const brushGroup = g.append("g").attr("class", "brush").call(brush);
 
       const circles = g
         .selectAll("circle")
@@ -166,6 +140,8 @@ const GeoMap = ({
           return circleShouldBeHighlighted(d) ? 1 : 0.01;
         })
         .on("mouseover", (event, d) => {
+          if (isBrushing) return;
+
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
@@ -187,6 +163,46 @@ const GeoMap = ({
         .on("mouseout", () => {
           tooltip.style("opacity", 0);
         });
+
+
+      function getFilteredData(selection) {
+        if (!selection) return [];
+
+        const [[x0, y0], [x1, y1]] = selection;
+        return geojsonData.features.filter((d) => {
+          const [x, y] = projection(d.geometry.coordinates);
+          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
+        });
+      }
+
+      function brushed(event) {
+        const selection = event.selection;
+        if (selection) {
+          brushSelectionRef.current = selection;
+          const brushedData = getFilteredData(selection);
+          brushedIdsRef.current = brushedData.map((d) => d.properties.id);
+          circles.attr("opacity", (d) => {
+            return brushedIdsRef.current.includes(d.properties.id) ? 1 : 0.05;
+          });
+        }
+      }
+
+      function brushEnd(event) {
+        if (!event.selection) {
+          brushSelectionRef.current = null;
+          svg.select(".brush").call(brush.move, null);
+          circles.attr("opacity", 1);
+          onFilterChange([]);
+        }
+        else {
+          brushSelectionRef.current = event.selection;
+          onFilterChange(brushedIdsRef.current);
+        }
+      }
+
+      if (brushSelectionRef.current) {
+        brushGroup.call(brush.move, brushSelectionRef.current);
+      }
 
       const zoomBehavior = d3
         .zoom()
@@ -431,6 +447,6 @@ const GeoMap = ({
       </div>
     </div>
   );
-};
+});
 
 export default GeoMap;
