@@ -138,7 +138,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           return color || "#000000";
         })
         .attr("opacity", (d) => {
-          return circleShouldBeHighlighted(d) ? 1 : 0.01;
+          return areCategoriesApplied(d) ? 1 : 0.01;
         })
         .on("mouseover", (event, d) => {
           if (isBrushing) return;
@@ -146,7 +146,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
-          if (circleShouldBeHighlighted(d)) {
+          if (areCategoriesApplied(d)) {
             tooltip
               .style("opacity", 1)
               .html(`
@@ -165,14 +165,15 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           tooltip.style("opacity", 0);
         });
 
-
       function getFilteredData(selection) {
         if (!selection) return [];
 
         const [[x0, y0], [x1, y1]] = selection;
         return geojsonData.features.filter((d) => {
           const [x, y] = projection(d.geometry.coordinates);
-          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
+          const isInBrushedArea = x0 <= x && x <= x1 && y0 <= y && y <= y1;
+
+          return isInBrushedArea && areCategoriesApplied(d);
         });
       }
 
@@ -183,7 +184,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           const brushedData = getFilteredData(selection);
           brushedIdsRef.current = brushedData.map((d) => d.properties.id);
           circles.attr("opacity", (d) => {
-            return brushedIdsRef.current.includes(d.properties.id) ? 1 : 0.05;
+            return brushedIdsRef.current.includes(d.properties.id) && areCategoriesApplied(d) ? 1 : 0.05;
           });
         }
       }
@@ -247,7 +248,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     filteredEarthquakeIds,
   ]);
 
-  const circleShouldBeHighlighted = (d) => {
+  const areCategoriesApplied = (d) => {
     const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
     const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
 
