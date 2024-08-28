@@ -34,6 +34,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
   const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   let isBrushing = false;
+  let isClearingBrush = false;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -188,11 +189,15 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
       }
 
       function brushEnd(event) {
+        if (isClearingBrush) return;
+
         if (!event.selection) {
+          isClearingBrush = true;
           brushSelectionRef.current = null;
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
           onFilterChange([]);
+          isClearingBrush = false;
         }
         else {
           brushSelectionRef.current = event.selection;
