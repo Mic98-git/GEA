@@ -18,8 +18,8 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await d3.csv(csvUrl).then(function(data) {
-          data.forEach(function(d) {
+        await d3.csv(csvUrl).then(function (data) {
+          data.forEach(function (d) {
             d.id = +d.id;
             d.tsne_x = +d.tsne_x;
             d.tsne_y = +d.tsne_y;
@@ -84,6 +84,9 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
         const category = d.magnitude_category;
         const color = magnitudeCategoryColorMap[category];
         return color || "#000000";
+      })
+      .attr("opacity", (d) => {
+        return (filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d["id"])) ? 1 : 0.05;
       });
   }, [tSNEData, dimensions, filteredEarthquakeIds]);
 
@@ -123,26 +126,36 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       );
     }
   };
+  
+  /*const applyCategoriesToOthersCharts = (magnitudeCategories) => {
+    const filteredIds = tSNEData.filter((d) =>
+    (magnitudeCategories.length === 0 ||
+      magnitudeCategories.includes(d.magnitude_category))
+    )
+      .map((d) => d.id);
+
+    onFilterChange(filteredIds); // Send the filtered IDs to the parent component
+  };*/
 
   return (
     <div className="scatterplot">
       <svg ref={svgRef}></svg>
       <div className="legend-container legend">
         <span className="legend-title">Magnitude:</span>
-      {Object.entries(magnitudeCategoryColorMap).map(([key, color]) => (
-        <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
-          <span
-            className="legend-circle"
-            style={{
-              opacity: selectedCategories.length > 0 && !selectedCategories.includes(key) ? 0.2 : 1,
-              background: color,
-              width: 8,
-              height: 8,
-            }}
-          ></span>
-          <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-        </button>
-      ))}
+        {Object.entries(magnitudeCategoryColorMap).map(([key, color]) => (
+          <button key={key} className="legend-item" onClick={() => filterByMagnitude(key)}>
+            <span
+              className="legend-circle"
+              style={{
+                opacity: selectedCategories.length > 0 && !selectedCategories.includes(key) ? 0.2 : 1,
+                background: color,
+                width: 8,
+                height: 8,
+              }}
+            ></span>
+            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
