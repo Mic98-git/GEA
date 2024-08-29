@@ -198,7 +198,12 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
-          onFilterChange([]);
+          if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
+            applyCategoriesToOthersCharts(selectedDepthCategories, selectedMagnitudeCategories);
+          }
+          else {
+            onFilterChange([]);
+          }
           isClearingBrush = false;
         }
         else {
