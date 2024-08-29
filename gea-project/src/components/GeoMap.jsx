@@ -146,7 +146,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
-          if (areCategoriesApplied(d)) {
+          if (areCategoriesApplied(d) && (brushedIdsRef.current.includes(d.properties.id) || brushedIdsRef.current.length === 0)) {
             tooltip
               .style("opacity", 1)
               .html(`
@@ -195,6 +195,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
         if (!event.selection) {
           isClearingBrush = true;
           brushSelectionRef.current = null;
+          brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
           onFilterChange([]);
@@ -245,7 +246,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     dimensions,
     selectedDepthCategories,
     selectedMagnitudeCategories,
-    filteredEarthquakeIds,
+    filteredEarthquakeIds
   ]);
 
   const areCategoriesApplied = (d) => {
