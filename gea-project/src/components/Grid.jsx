@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import GeoMap from './GeoMap';
 import TimeHeatmap from './TimeHeatmap';
 import TSNEScatterPlot from './T-SNEScatterplot';
@@ -14,8 +14,15 @@ const VisualizationGrid = () => {
 
   // Callback to update the filtered earthquake IDs
   const handleFilterChange = useCallback((newFilteredIds) => {
-    setFilteredEarthquakeIds(newFilteredIds);
-  }, []);
+    // If no items have been filtered yet, start with the new filter set
+    if (filteredEarthquakeIds.length === 0) {
+      setFilteredEarthquakeIds(newFilteredIds);
+    } else {
+      // Further filter the already filtered IDs with the new filter
+      const updatedFilteredIds = filteredEarthquakeIds.filter(id => newFilteredIds.includes(id));
+      setFilteredEarthquakeIds(updatedFilteredIds);
+    }
+  }, [filteredEarthquakeIds]);
 
   return (
     <div className="grid">
