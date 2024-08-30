@@ -32,7 +32,6 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedDepthCategories, setSelectedDepthCategories] = useState([]);
   const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
   let isBrushing = false;
   let isClearingBrush = false;
 
@@ -146,7 +145,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
-          if (areCategoriesApplied(d) && (brushedIdsRef.current.includes(d.properties.id) || brushedIdsRef.current.length === 0)) {
+          if (areCategoriesApplied(d) && (brushedIdsRef.current.includes(d.properties.id) || brushedIdsRef.current.length === 0) && (filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id))) {
             tooltip
               .style("opacity", 1)
               .html(`
@@ -250,9 +249,37 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     crossfilterData,
     dimensions,
     selectedDepthCategories,
-    selectedMagnitudeCategories,
-    filteredEarthquakeIds
+    selectedMagnitudeCategories
   ]);
+
+  useEffect(() => {
+    if (!geojsonData) return;
+  
+    const svg = d3.select(svgRef.current);
+    const circles = svg.selectAll("circle");
+  
+    circles.attr("opacity", (d) => {
+      const isIdFiltered = filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id);
+  
+      // Only show circles that match the ID filter and the currently selected depth/magnitude filters
+      return isIdFiltered && areCategoriesApplied(d) ? 1 : 0.05;
+    });
+
+    if (brushSelectionRef.current) {  
+      // Only keep circles that are in both the brushed area and the filteredEarthquakeIds
+      const finalBrushedIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
+      
+      // Update the brushed circles to match the new filtering
+      circles.attr("opacity", (d) => {
+        return finalBrushedIds.includes(d.properties.id) ? 1 : 0.05;
+      });
+  
+      // Update the brush selection
+      brushedIdsRef.current = finalBrushedIds;
+      onFilterChange(finalBrushedIds); // Send the updated brushed IDs to the parent component
+    }
+  }, [filteredEarthquakeIds, selectedDepthCategories, selectedMagnitudeCategories]);
+  
 
   const areCategoriesApplied = (d) => {
     const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
@@ -367,7 +394,9 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           (depthCategories.length === 0 ||
             depthCategories.includes(feature.properties.depthCategory)) &&
           (magnitudeCategories.length === 0 ||
-            magnitudeCategories.includes(feature.properties.magnitudeCategory))
+            magnitudeCategories.includes(feature.properties.magnitudeCategory)) &&
+          (filteredEarthquakeIds.length === 0 || 
+            filteredEarthquakeIds.includes(feature.properties.id))
       )
       .map((feature) => feature.properties.id);
 
