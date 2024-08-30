@@ -249,7 +249,8 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     crossfilterData,
     dimensions,
     selectedDepthCategories,
-    selectedMagnitudeCategories
+    selectedMagnitudeCategories,
+    filteredEarthquakeIds
   ]);
 
   useEffect(() => {
@@ -260,7 +261,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
   
     circles.attr("opacity", (d) => {
       const isIdFiltered = filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id);
-  
+
       // Only show circles that match the ID filter and the currently selected depth/magnitude filters
       return isIdFiltered && areCategoriesApplied(d) ? 1 : 0.05;
     });
