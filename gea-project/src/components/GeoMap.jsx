@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import * as d3 from "d3";
 import { feature } from "topojson-client";
 import crossfilter from "crossfilter2";
@@ -42,21 +42,9 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
         setTopojsonData(topoData);
 
         const geoData = await d3.json(geojsonUrl);
-        const geojsonWithAttributes = geoData.features.map((feature) => {
-          const depthCategory = feature.properties.depth_category || "unknown";
-          const magnitudeCategory =
-            feature.properties.magnitude_category || "minor";
-          return {
-            ...feature,
-            properties: {
-              ...feature.properties,
-              depthCategory,
-              magnitudeCategory,
-            },
-          };
-        });
-        setGeojsonData({ ...geoData, features: geojsonWithAttributes });
-        const ndx = crossfilter(geojsonWithAttributes);
+        setGeojsonData(geoData);
+
+        const ndx = crossfilter(geoData.features);
         setCrossfilterData(ndx);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -65,6 +53,72 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
     fetchData();
   }, []);
+
+  const areCategoriesApplied = (d) => {
+    const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depth_category);
+    const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitude_category);
+
+    return depthFilter && magnitudeFilter;
+  }
+
+  const applyCategories = () => {
+    if (!geojsonData) return; // Ensure geojsonData is loaded
+
+    // Determine the data source based on whether filtered IDs are present
+    const dataSource = filteredEarthquakeIds.length > 0
+      ? geojsonData.features.filter(feature => filteredEarthquakeIds.includes(feature.properties.id))
+      : geojsonData.features;
+
+    // Filter the features based on selected depth and magnitude categories
+    const filteredIds = dataSource
+      .filter(feature => {
+        areCategoriesApplied(feature);
+      })
+      .map(feature => feature.properties.id);
+
+    // Notify parent component of the filtered IDs
+    onFilterChange(filteredIds);
+  };
+
+  const filterByDepth = (depthCategory) => {
+    setSelectedDepthCategories((prevCategories) => {
+      const updatedCategories = prevCategories.includes(depthCategory)
+        ? prevCategories.filter((category) => category !== depthCategory)
+        : [...prevCategories, depthCategory];
+
+      return updatedCategories;
+    });
+  };
+
+  const filterByMagnitude = (magnitudeCategory) => {
+    setSelectedMagnitudeCategories((prevCategories) => {
+      const updatedCategories = prevCategories.includes(magnitudeCategory)
+        ? prevCategories.filter((category) => category !== magnitudeCategory)
+        : [...prevCategories, magnitudeCategory];
+
+      return updatedCategories;
+    });
+  };
+
+  // useEffect to apply the categories whenever depth or magnitude changes
+  useEffect(() => {
+    applyCategories();
+  }, [selectedDepthCategories, selectedMagnitudeCategories]);
+
+  // Another useEffect to ensure proper state updates and avoid async issues
+  useEffect(() => {
+    if (!geojsonData) return; // Ensure geojsonData is loaded
+    
+    const newFilteredIds = geojsonData.features
+      .filter((feature) => {
+        const depthMatch = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(feature.properties.depth_category);
+        const magnitudeMatch = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(feature.properties.magnitude_category);
+        return depthMatch && magnitudeMatch;
+      })
+      .map((feature) => feature.properties.id);
+
+    onFilterChange(newFilteredIds);
+  }, [selectedDepthCategories, selectedMagnitudeCategories, geojsonData, onFilterChange]);
 
   useEffect(() => {
     if (topojsonData && geojsonData && crossfilterData) {
@@ -127,17 +181,17 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           return y;
         })
         .attr("r", (d) => {
-          const magnitude = d.properties.magnitudeCategory;
+          const magnitude = d.properties.magnitude_category;
           const size = magnitudeSizeMap[magnitude];
           return size ? size / currentZoomTransformRef.current.k : 3;
         })
         .attr("fill", (d) => {
-          const depth = d.properties.depthCategory;
+          const depth = d.properties.depth_category;
           const color = depthColorMap[depth];
           return color || "#000000";
         })
         .attr("opacity", (d) => {
-          return areCategoriesApplied(d) ? 1 : 0.01;
+          return isFilteringApplied(d) && areCategoriesApplied(d) ? 1 : 0.01;
         })
         .on("mouseover", (event, d) => {
           if (isBrushing) return;
@@ -145,7 +199,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
 
-          if (areCategoriesApplied(d) && (brushedIdsRef.current.includes(d.properties.id) || brushedIdsRef.current.length === 0) && (filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id))) {
+          if (areCategoriesApplied(d) && isBrushingApplied(d) && isFilteringApplied(d)) {
             tooltip
               .style("opacity", 1)
               .html(`
@@ -198,7 +252,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
           if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
-            applyCategoriesToOthersCharts(selectedDepthCategories, selectedMagnitudeCategories);
+            applyCategories();
           }
           else {
             onFilterChange([]);
@@ -253,47 +307,19 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     filteredEarthquakeIds
   ]);
 
-  useEffect(() => {
-    if (!geojsonData) return;
-  
-    const svg = d3.select(svgRef.current);
-    const circles = svg.selectAll("circle");
-  
-    circles.attr("opacity", (d) => {
-      const isIdFiltered = filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id);
+  const isBrushingApplied = (d) => {
+    return brushedIdsRef.current.includes(d.properties.id) || brushedIdsRef.current.length === 0;
+  }
 
-      // Only show circles that match the ID filter and the currently selected depth/magnitude filters
-      return isIdFiltered && areCategoriesApplied(d) ? 1 : 0.05;
-    });
-
-    if (brushSelectionRef.current) {  
-      // Only keep circles that are in both the brushed area and the filteredEarthquakeIds
-      const finalBrushedIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
-      
-      // Update the brushed circles to match the new filtering
-      circles.attr("opacity", (d) => {
-        return finalBrushedIds.includes(d.properties.id) ? 1 : 0.05;
-      });
-  
-      // Update the brush selection
-      brushedIdsRef.current = finalBrushedIds;
-      onFilterChange(finalBrushedIds); // Send the updated brushed IDs to the parent component
-    }
-  }, [filteredEarthquakeIds, selectedDepthCategories, selectedMagnitudeCategories]);
-  
-
-  const areCategoriesApplied = (d) => {
-    const depthFilter = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(d.properties.depthCategory);
-    const magnitudeFilter = selectedMagnitudeCategories.length === 0 || selectedMagnitudeCategories.includes(d.properties.magnitudeCategory);
-
-    return depthFilter && magnitudeFilter;
+  const isFilteringApplied = (d) => {
+    return filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.properties.id);
   }
 
   const updateCircleSizes = (transform) => {
     d3.select(svgRef.current)
       .selectAll("circle")
       .attr("r", (d) => {
-        const magnitude = d.properties.magnitudeCategory;
+        const magnitude = d.properties.magnitude_category;
         const size = magnitudeSizeMap[magnitude];
         return (size || 3) / transform.k;
       });
@@ -372,37 +398,21 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const filterByDepth = (depthCategory) => {
-    const updatedCategories = selectedDepthCategories.includes(depthCategory)
-      ? selectedDepthCategories.filter((category) => category !== depthCategory)
-      : [...selectedDepthCategories, depthCategory];
-    setSelectedDepthCategories(updatedCategories);
-    applyCategoriesToOthersCharts(updatedCategories, selectedMagnitudeCategories);
-  };
+  const handleMoveLeft = () => {
+    return panMap(10, 0);
+  }
 
-  const filterByMagnitude = (magnitudeCategory) => {
-    const updatedCategories = selectedMagnitudeCategories.includes(magnitudeCategory)
-      ? selectedMagnitudeCategories.filter((category) => category !== magnitudeCategory)
-      : [...selectedMagnitudeCategories, magnitudeCategory];
-    setSelectedMagnitudeCategories(updatedCategories);
-    applyCategoriesToOthersCharts(selectedDepthCategories, updatedCategories);
-  };
+  const handleMoveRight = () => {
+    return panMap(-10, 0);
+  }
 
-  const applyCategoriesToOthersCharts = (depthCategories, magnitudeCategories) => {
-    const filteredIds = geojsonData.features
-      .filter(
-        (feature) =>
-          (depthCategories.length === 0 ||
-            depthCategories.includes(feature.properties.depthCategory)) &&
-          (magnitudeCategories.length === 0 ||
-            magnitudeCategories.includes(feature.properties.magnitudeCategory)) &&
-          (filteredEarthquakeIds.length === 0 || 
-            filteredEarthquakeIds.includes(feature.properties.id))
-      )
-      .map((feature) => feature.properties.id);
+  const handleMoveUp = () => {
+    return panMap(0, 10);
+  }
 
-    onFilterChange(filteredIds); // Send the filtered IDs to the parent component
-  };
+  const handleMoveDown = () => {
+    return panMap(0, -10);
+  }
 
   return (
     <div className="map">
@@ -417,16 +427,16 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
         <button onClick={recenterMap} title="Recenter">
           <img src={crosshairIcon} className="resize-map" />
         </button>
-        <button onClick={() => panMap(10, 0)} title="Move left">
+        <button onClick={handleMoveLeft} title="Move left">
           &larr;
         </button>
-        <button onClick={() => panMap(-10, 0)} title="Move right">
+        <button onClick={handleMoveRight} title="Move right">
           &rarr;
         </button>
-        <button onClick={() => panMap(0, 10)} title="Move up">
+        <button onClick={handleMoveUp} title="Move up">
           &uarr;
         </button>
-        <button onClick={() => panMap(0, -10)} title="Move down">
+        <button onClick={handleMoveDown} title="Move down">
           &darr;
         </button>
       </div>
@@ -453,7 +463,14 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
                   height: 8,
                 }}
               ></span>
-              <span className="legend-text">
+              <span className="legend-text"
+                style={{
+                  opacity:
+                    selectedDepthCategories.length > 0 &&
+                      !selectedDepthCategories.includes(key)
+                      ? 0.5
+                      : 1,
+                }}>
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </span>
             </button>
@@ -480,7 +497,16 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
                   height: size * 2,
                 }}
               ></span>
-              <span className="legend-text">
+              <span
+                className="legend-text"
+                style={{
+                  opacity:
+                    selectedMagnitudeCategories.length > 0 &&
+                      !selectedMagnitudeCategories.includes(key)
+                      ? 0.5
+                      : 1,
+                }}
+              >
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </span>
             </button>
