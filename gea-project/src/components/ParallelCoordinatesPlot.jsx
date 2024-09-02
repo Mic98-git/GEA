@@ -1,28 +1,31 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import * as d3 from "d3";
 
-const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
+const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const dimensions = ["magSource", "magType", "type", "dmin_category"];
   const svgRef = useRef();
+  const brushSelectionRef = useRef(null);
+  const brushedIdsRef = useRef([]);
+  const activeBrushesRef = useRef({});
+  const isBrushingRef = useRef(false);
   const [dim, setDim] = useState({ width: 800, height: 600 });
   const [data, setData] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState({});
-  const activeBrushes = {};
 
   // Custom y-axis labels mapping
   const yAxisLabels = {
     magSource: "Magnitude Source",
     magType: "Magnitude Type",
     type: "Event Type",
-    dmin_category: "Epicenter Nearest station",
+    dmin_category: "Epicenter Nearest Station"
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await d3.csv(csvUrl).then(function (data) {
+        await d3.csv(csvUrl).then(function (csvData) {
           const mappings = {};
-          data.forEach((d) => {
+          csvData.forEach((d) => {
             d.id = +d.id;
             Object.keys(d).forEach((key) => {
               if (dimensions.includes(key)) {
@@ -35,7 +38,7 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
               }
             });
           });
-          setData(data);
+          setData(csvData);
           setCategoryMappings(mappings);
         });
       } catch (error) {
@@ -43,7 +46,7 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
       }
     };
     fetchData();
-  }, [csvUrl]);
+  }, []);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -125,34 +128,32 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
         );
       })
       .on("mouseover", function (event, dimension) {
-        // Hide previous tooltip and check for an active brush on this axis
-        tooltip.style("opacity", 0);
-        if (activeBrushes[dimension]) {
+        if (activeBrushesRef.current[dimension] && !isBrushingRef.current) {
           tooltip
             .style("opacity", 1)
             .html(`Click to clear filter on ${yAxisLabels[dimension]}`)
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
         }
-        else {
+        /*else {
           tooltip
             .style("opacity", 1)
             .html(`Brush to filter by ${yAxisLabels[dimension]}`)
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
-        }
+        }*/
       })
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
       })
-      .on("click", function (event, dimension) {
-        if (activeBrushes[dimension]) {
+      .on("click", function (_, dimension) {
+        tooltip.style("opacity", 0);
+        if (activeBrushesRef.current[dimension]) {
           clearBrush(dimension);
-          tooltip.style("opacity", 0);  // Hide tooltip after clearing
         }
       });
 
-    // Add axis labels and delete buttons
+    // Add axis labels
     axis
       .append("text")
       .style("text-anchor", "middle")
@@ -173,15 +174,19 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
 
     axis.selectAll("path, line").style("stroke", "white");
 
-    // Add brushing
-    const brush = d3
-      .brushY()
+    const brush = d3.brushY()
       .extent([
-        [-15, margin.top],
-        [15, height - margin.bottom],
+        [-10, margin.top],
+        [10, height - margin.bottom],
       ])
-      .on("brush", brushed)
-      .on("end", brushEnd);
+      .on("start brush", (event, dimension) => {
+        isBrushingRef.current = true;
+        brushed(event, dimension)
+      })
+      .on("end", (event, dimension) => {
+        isBrushingRef.current = false;
+        brushEnd(event, dimension)
+      });
 
     axis
       .append("g")
@@ -192,8 +197,8 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
 
     function getFilteredData() {
       return data.filter((d) => {
-        return Object.keys(activeBrushes).every((dim) => {
-          const [y0, y1] = activeBrushes[dim];
+        return Object.keys(activeBrushesRef.current).every((dim) => {
+          const [y0, y1] = activeBrushesRef.current[dim];
           const value = +d[dim];
           return y1 <= value && value <= y0;
         });
@@ -203,52 +208,76 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
     function brushed(event, dimension) {
       const selection = event.selection;
       if (selection) {
-        activeBrushes[dimension] = selection.map(y[dimension].invert);
+        activeBrushesRef.current[dimension] = selection.map(y[dimension].invert);
       } else {
-        delete activeBrushes[dimension];
+        delete activeBrushesRef.current[dimension];
       }
 
-      const bData = getFilteredData();
-      updatePaths(bData);
+      const brushedData = getFilteredData();
+      brushedIdsRef.current = brushedData.map((d) => d.id);
+      updatePaths(brushedData);
     }
 
-    function brushEnd() {
-      if (!Object.keys(activeBrushes).length) {
+    function brushEnd(event, dimension) {
+      const selection = event.selection;
+
+      if (Object.keys(activeBrushesRef.current).length === 0) {
+        // If no brushes are active, show all paths
         updatePaths(data);
-        applyFiltersToOthersCharts(data);
+        applyFiltersToOthersCharts([]);
+        brushedIdsRef.current = [];
+        brushSelectionRef.current = null;
       } else {
-        const filteredData = getFilteredData();
+        brushSelectionRef.current = selection;
+        const newFilteredIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
+
+        if (JSON.stringify(newFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
+          brushedIdsRef.current = newFilteredIds;
+          applyFiltersToOthersCharts(newFilteredIds);
+        }
       }
+    }
+
+    if (brushSelectionRef.current) {
+      axis.each(function (dim) {
+        if (activeBrushesRef.current[dim]) {
+          d3.select(this)
+            .select(".brush")
+            .call(brush.move, activeBrushesRef.current[dim].map(y[dim]));
+        }
+      });
     }
 
     function clearBrush(dimension) {
-      // Remove the specific dimension from activeBrushes
-      delete activeBrushes[dimension];
-    
-      // Clear the visual brush on the specific dimension
+      if (!activeBrushesRef.current[dimension]) {
+        return;  // No active brush on this dimension, nothing to clear.
+      }
+
+      delete activeBrushesRef.current[dimension];
+
       axisGroup
         .select(`.axis:nth-child(${dimensions.indexOf(dimension) + 1}) .brush`)
         .call(brush.move, null);
-    
-      // Re-apply brushes for remaining dimensions
-      axis.each(function(d) {
-        if (activeBrushes[d]) {
-          d3.select(this).call(brush.move, activeBrushes[d].map(y[d]));
+
+      // Update remaining brushes in the SVG
+      axis.each(function (d) {
+        if (activeBrushesRef.current[d]) {
+          d3.select(this)
+            .select(".brush")
+            .call(brush.move, activeBrushesRef.current[d].map(y[d]));
         }
       });
-    
-      const bData = getFilteredData();
-      updatePaths(bData);
-    
-      // Apply filters to other charts (if applicable)
-      applyFiltersToOthersCharts(bData);
-    }    
 
-    // Send the filtered IDs to the parent component
-    const applyFiltersToOthersCharts = (filteredData) => {
-      const filteredIds = filteredData.map(d => d["id"]);
-      onFilterChange(filteredIds);
-    };
+      // Filter the data based on remaining active brushes
+      const remainingBrushedData = getFilteredData();
+      brushedIdsRef.current = remainingBrushedData.map((d) => d.id);
+
+      // Update the paths to reflect the remaining brushes
+      updatePaths(remainingBrushedData);
+
+      // Send updated filtered IDs to the parent component
+      applyFiltersToOthersCharts(brushedIdsRef.current);
+    }
 
     // Apply the filtered IDs from the parent component
     const filteredData = data.filter((d) =>
@@ -256,6 +285,11 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
     );
     updatePaths(filteredData);
   }, [data, categoryMappings, dim, filteredEarthquakeIds]);
+
+  // Send the filtered IDs to the parent component
+  function applyFiltersToOthersCharts(filteredIds) {
+    onFilterChange(filteredIds);
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -276,6 +310,6 @@ const ParallelCoordinates = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) 
       <svg ref={svgRef} />
     </div>
   );
-};
+});
 
 export default ParallelCoordinates;
