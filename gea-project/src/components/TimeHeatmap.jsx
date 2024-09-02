@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import * as d3 from "d3";
 
-const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
+const TimeHeatmap = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [data, setData] = useState([]);
@@ -15,67 +15,109 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   ];
 
   const filterData = (filteredWeeks, filteredMonths) => {
-    // If no weeks or months are selected, return the original data
-    if (filteredWeeks.length === 0 && filteredMonths.length === 0) {
-      return data;
+    // Start by filtering data based on filteredEarthquakeIds
+    let filteredData = data;
+  
+    if (filteredEarthquakeIds.length > 0) {
+      filteredData = data.filter(row => filteredEarthquakeIds.includes(row.id));
     }
-
-    // Create a copy of the data to manipulate
-    const filteredData = data.map(row => [...row]);
-
-    // If weeks are selected, filter rows (weeks)
+  
+    // Aggregate the filtered data into a heatmap matrix
+    const dataMatrix = Array.from({ length: months.length }, () =>
+      Array(weeks.length).fill(0)
+    );
+  
+    filteredData.forEach(({ month, week }) => {
+      const monthIndex = month - 1;
+      const weekIndex = week - 1;
+      if (
+        monthIndex >= 0 &&
+        monthIndex < 12 &&
+        weekIndex >= 0 &&
+        weekIndex < 4
+      ) {
+        dataMatrix[monthIndex][weekIndex] += 1;
+      }
+    });
+  
+    // Now apply the week and month filters
     if (filteredWeeks.length > 0) {
       const weekIndexes = filteredWeeks.map(week => weeks.indexOf(week));
-      filteredData.forEach((monthData, monthIndex) => {
+      dataMatrix.forEach((monthData, monthIndex) => {
         monthData.forEach((_, weekIndex) => {
           if (!weekIndexes.includes(weekIndex)) {
-            filteredData[monthIndex][weekIndex] = 0; // Set non-selected weeks to 0
+            dataMatrix[monthIndex][weekIndex] = 0; // Set non-selected weeks to 0
           }
         });
       });
     }
-
-    // If months are selected, filter columns (months)
+  
     if (filteredMonths.length > 0) {
       const monthIndexes = filteredMonths.map(month => months.indexOf(month));
-      filteredData.forEach((_, monthIndex) => {
+      dataMatrix.forEach((_, monthIndex) => {
         if (!monthIndexes.includes(monthIndex)) {
-          filteredData[monthIndex] = Array(weeks.length).fill(0); // Set non-selected months to 0
+          dataMatrix[monthIndex] = Array(weeks.length).fill(0); // Set non-selected months to 0
         }
       });
     }
-
-    return filteredData;
-  };
+  
+    return dataMatrix;
+  };  
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const d = await d3.csv(csvUrl);
-        const dataMatrix = Array.from({ length: months.length }, () =>
-          Array(weeks.length).fill(0)
-        );
-        d.forEach((row) => {
-          d.id = +d.id;
-          const monthIndex = +row.month - 1;
-          const weekIndex = +row.week - 1;
-          if (
-            monthIndex >= 0 &&
-            monthIndex < 12 &&
-            weekIndex >= 0 &&
-            weekIndex < 4
-          ) {
-            dataMatrix[monthIndex][weekIndex] += 1;
-          }
-        });
-        setData(dataMatrix);
-        setSelectedData(dataMatrix);
+        const rawData = await d3.csv(csvUrl, d => ({
+          id: +d.id,
+          month: +d.month,
+          week: +d.week,
+        }));
+        setData(rawData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, []);
+  }, [csvUrl]);
+
+  useEffect(() => {
+    if (data.length > 0) {
+      const filteredData = filteredEarthquakeIds.length > 0
+        ? data.filter(row => filteredEarthquakeIds.includes(row.id))
+        : data;
+  
+      const dataMatrix = Array.from({ length: months.length }, () =>
+        Array(weeks.length).fill(0)
+      );
+  
+      filteredData.forEach(({ month, week }) => {
+        const monthIndex = month - 1;
+        const weekIndex = week - 1;
+        if (
+          monthIndex >= 0 &&
+          monthIndex < 12 &&
+          weekIndex >= 0 &&
+          weekIndex < 4
+        ) {
+          dataMatrix[monthIndex][weekIndex] += 1;
+        }
+      });
+  
+      setSelectedData(dataMatrix);
+    }
+  }, [data, filteredEarthquakeIds]);  
+
+  useEffect(() => {
+    const ids = data
+      .filter(row => 
+        (selectedWeeks.length === 0 || selectedWeeks.includes(weeks[row.week - 1])) &&
+        (selectedMonths.length === 0 || selectedMonths.includes(months[row.month - 1]))
+      )
+      .map(row => row.id);
+  
+    // Trigger the callback to update other components
+    onFilterChange(ids);
+  }, [selectedWeeks, selectedMonths, data]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -139,11 +181,13 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       .data(selectedData.flat())
       .enter()
       .append("rect")
-      .attr("x", (d, i) => Math.floor(i / weeks.length) * (cellWidth + cellSpacing))
-      .attr("y", (d, i) => (i % weeks.length) * (cellHeight + cellSpacing))
+      .attr("x", (_, i) => Math.floor(i / weeks.length) * (cellWidth + cellSpacing))
+      .attr("y", (_, i) => (i % weeks.length) * (cellHeight + cellSpacing))
       .attr("width", cellWidth)
       .attr("height", cellHeight)
       .attr("fill", (d) => colorScale(d))
+      .attr("rx", 2)
+      .attr("ry", 2)
       .on("mouseover", function (event, d) {
         tooltip.style("opacity", 1);
         tooltip
@@ -334,6 +378,6 @@ const TimeHeatmap = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       <svg ref={svgRef} />
     </div>
   );
-};
+});
 
 export default TimeHeatmap;
