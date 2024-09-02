@@ -312,8 +312,9 @@ const TimeHeatmap = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => 
       .domain(colorScale.domain())
       .range([0, totalCellWidth]);
 
+    // Get unique tick values and exclude the min and max
     const tickValues = [...new Set(colorScale.ticks().map(t => Math.round(t)))]
-      .filter((value, _, arr) => value !== d3.min(selectedData.flat()) && value !== d3.max(selectedData.flat()));
+      .filter((value) => value !== d3.min(selectedData.flat()) && value !== d3.max(selectedData.flat()));
 
     const legendAxis = d3
       .axisBottom(legendScale)

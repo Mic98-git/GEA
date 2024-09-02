@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const magnitudeCategoryColorMap = {
@@ -9,7 +9,7 @@ const magnitudeCategoryColorMap = {
   major: "purple"
 };
 
-const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
+const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [tSNEData, setTSNEData] = useState([]);
@@ -126,7 +126,7 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
       );
     }
   };
-  
+
   /*const applyCategoriesToOthersCharts = (magnitudeCategories) => {
     const filteredIds = tSNEData.filter((d) =>
     (magnitudeCategories.length === 0 ||
@@ -153,12 +153,19 @@ const TSNEScatterplot = ({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
                 height: 8,
               }}
             ></span>
-            <span className="legend-text">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+            <span className="legend-text"
+              style={{
+                opacity:
+                  selectedCategories.length > 0 &&
+                    !selectedCategories.includes(key)
+                    ? 0.5
+                    : 1,
+              }}>{key.charAt(0).toUpperCase() + key.slice(1)}</span>
           </button>
         ))}
       </div>
     </div>
   );
-};
+});
 
 export default TSNEScatterplot;
