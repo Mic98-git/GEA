@@ -26,14 +26,14 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
   const currentZoomTransformRef = useRef(d3.zoomIdentity);
   const brushedIdsRef = useRef([]);
   const brushSelectionRef = useRef(null);
+  const isBrushingRef = useRef(false);
+  const isClearingBrushRef = useRef(false);
   const [topojsonData, setTopojsonData] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
   const [crossfilterData, setCrossfilterData] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedDepthCategories, setSelectedDepthCategories] = useState([]);
   const [selectedMagnitudeCategories, setSelectedMagnitudeCategories] = useState([]);
-  let isBrushing = false;
-  let isClearingBrush = false;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,7 +107,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
   useEffect(() => {
     if (!geojsonData) return; // Ensure geojsonData is loaded
-    
+
     const newFilteredIds = geojsonData.features
       .filter((feature) => {
         const depthMatch = selectedDepthCategories.length === 0 || selectedDepthCategories.includes(feature.properties.depth_category);
@@ -154,13 +154,13 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           [0, 0],
           [width, height],
         ])
-        .on("start", () => isBrushing = true)
+        .on("start", () => isBrushingRef.current = true)
         .on("brush", (event) => {
-          isBrushing = true;
+          isBrushingRef.current = true;
           brushed(event)
         })
         .on("end", (event) => {
-          isBrushing = false;
+          isBrushingRef.current = false;
           brushEnd(event);
         });
 
@@ -193,7 +193,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           return isFilteringApplied(d) && areCategoriesApplied(d) ? 1 : 0.01;
         })
         .on("mouseover", (event, d) => {
-          if (isBrushing) return;
+          if (isBrushingRef.current) return;
 
           event.stopPropagation(); // Prevent brush from triggering
           const { pageX, pageY } = event;
@@ -236,37 +236,40 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           const brushedData = getFilteredData(selection);
           brushedIdsRef.current = brushedData.map((d) => d.properties.id);
           circles.attr("opacity", (d) => {
-            return brushedIdsRef.current.includes(d.properties.id) && areCategoriesApplied(d) ? 1 : 0.05;
+            return brushedIdsRef.current.includes(d.properties.id) && areCategoriesApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
           });
         }
       }
 
       function brushEnd(event) {
-        if (isClearingBrush) return;
-      
+        if (isClearingBrushRef.current) return;
+
         if (!event.selection) {
-          isClearingBrush = true;
+          isClearingBrushRef.current = true;
           brushSelectionRef.current = null;
           brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
-      
+
           if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
             applyCategories();
           } else {
             onFilterChange([]); // You may want to wrap this in a conditional as well
           }
-      
-          isClearingBrush = false;
+
+          isClearingBrushRef.current = false;
         } else {
           brushSelectionRef.current = event.selection;
-      
-          const newFilteredIds = brushedIdsRef.current;
-          if (JSON.stringify(filteredEarthquakeIds) !== JSON.stringify(newFilteredIds)) {
-            onFilterChange(newFilteredIds);
+
+          const updatedBrushedIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
+
+          // Compare updated brushed IDs with current filtered IDs
+          if (JSON.stringify(updatedBrushedIds) !== JSON.stringify(filteredEarthquakeIds)) {
+            brushedIdsRef.current = updatedBrushedIds;
+            onFilterChange(updatedBrushedIds);
           }
         }
-      }      
+      }
 
       if (brushSelectionRef.current) {
         brushGroup.call(brush.move, brushSelectionRef.current);
