@@ -41,15 +41,15 @@ df.insert(1, 'week', weeks)
 #dmin category preprocessing
 def categorize_dmin(dmin):
     if dmin <= 10:
-        return '0-10'
+        return '0-10 km'
     elif 10 < dmin <= 20:
-        return '10-20'
+        return '10-20 km'
     elif 20 < dmin <= 30:
-        return '20-30'
+        return '20-30 km'
     elif 30 < dmin < 40:
-        return '30-40'
+        return '30-40 km'
     else:
-        return '40-50'
+        return '40-50 km'
 
 # Depth and magnitude categories preprocessing
 def categorize_depth(depth):
