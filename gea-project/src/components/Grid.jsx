@@ -9,23 +9,50 @@ const VisualizationGrid = () => {
   const geojsonUrl = '/eq_coordinates.geojson';
   const csvUrl = '/prep_dataset.csv';
 
-  // State to manage the filtered earthquake IDs
-  const [filteredEarthquakeIds, setFilteredEarthquakeIds] = useState([]);
+  // State to manage the filtered earthquake IDs for each chart
+  const [geoMapFilters, setGeoMapFilters] = useState([]);
+  const [parallelCoordinatesFilters, setParallelCoordinatesFilters] = useState([]);
+  const [timeHeatmapFilters, setTimeHeatmapFilters] = useState([]);
+  const [tsneScatterPlotFilters, setTsneScatterPlotFilters] = useState([]);
 
-  // Callback to update the filtered earthquake IDs
-  const handleFilterChange = useCallback((newFilteredIds) => {
-    setFilteredEarthquakeIds((prevFilteredIds) => {
-      // If there are no previous filters, just return the new ones
-      if (prevFilteredIds.length === 0) {
-        return newFilteredIds;
-      }
-  
-      // Find the intersection of previous and new filtered IDs
-      const combinedFilteredIds = prevFilteredIds.filter(id => newFilteredIds.includes(id));
-  
-      return combinedFilteredIds;
-    });
+  // Function to combine all filters using AND logic across different charts
+  const combineFilters = () => {
+    const allFilters = [
+      geoMapFilters,
+      parallelCoordinatesFilters,
+      timeHeatmapFilters,
+      tsneScatterPlotFilters
+    ];
+
+    // Perform AND across different charts
+    const combinedFilteredIds = allFilters.reduce((acc, filter) => {
+      if (filter.length === 0) return acc; // Ignore empty filters
+      if (acc.length === 0) return filter; // Initialize with the first set of filters
+      return acc.filter(id => filter.includes(id)); // AND operation across different charts
+    }, []);
+
+    return combinedFilteredIds;
+  };
+
+  // Callbacks to handle filter changes for each chart
+  const handleGeoMapFilterChange = useCallback((newFilteredIds) => {
+    setGeoMapFilters(newFilteredIds);
   }, []);
+
+  const handleParallelCoordinatesFilterChange = useCallback((newFilteredIds) => {
+    setParallelCoordinatesFilters(newFilteredIds);
+  }, []);
+
+  const handleTimeHeatmapFilterChange = useCallback((newFilteredIds) => {
+    setTimeHeatmapFilters(newFilteredIds);
+  }, []);
+
+  const handleTSNEScatterPlotFilterChange = useCallback((newFilteredIds) => {
+    setTsneScatterPlotFilters(newFilteredIds);
+  }, []);
+
+  // Get the final combined filter IDs
+  const filteredEarthquakeIds = combineFilters();
 
   return (
     <div className="grid">
@@ -35,14 +62,14 @@ const VisualizationGrid = () => {
             topojsonUrl={topojsonUrl}
             geojsonUrl={geojsonUrl}
             filteredEarthquakeIds={filteredEarthquakeIds}
-            onFilterChange={handleFilterChange}
+            onFilterChange={handleGeoMapFilterChange}
           />
         </div>
         <div key="parallel" className="grid-item parallel-item">
           <ParallelCoordinates
             csvUrl={csvUrl}
             filteredEarthquakeIds={filteredEarthquakeIds}
-            onFilterChange={handleFilterChange}
+            onFilterChange={handleParallelCoordinatesFilterChange}
           />
         </div>
       </div>
@@ -51,14 +78,14 @@ const VisualizationGrid = () => {
           <TimeHeatmap
             csvUrl={csvUrl}
             filteredEarthquakeIds={filteredEarthquakeIds}
-            onFilterChange={handleFilterChange}
+            onFilterChange={handleTimeHeatmapFilterChange}
           />
         </div>
         <div key="tsne" className="grid-item">
           <TSNEScatterPlot
             csvUrl={csvUrl}
             filteredEarthquakeIds={filteredEarthquakeIds}
-            onFilterChange={handleFilterChange}
+            onFilterChange={handleTSNEScatterPlotFilterChange}
           />
         </div>
       </div>
