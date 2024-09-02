@@ -80,6 +80,11 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     onFilterChange(filteredIds);
   };
 
+  // apply the categories whenever depth or magnitude changes
+  useEffect(() => {
+    applyCategories();
+  }, [selectedDepthCategories, selectedMagnitudeCategories]);
+
   const filterByDepth = (depthCategory) => {
     setSelectedDepthCategories((prevCategories) => {
       const updatedCategories = prevCategories.includes(depthCategory)
@@ -100,12 +105,6 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
     });
   };
 
-  // useEffect to apply the categories whenever depth or magnitude changes
-  useEffect(() => {
-    applyCategories();
-  }, [selectedDepthCategories, selectedMagnitudeCategories]);
-
-  // Another useEffect to ensure proper state updates and avoid async issues
   useEffect(() => {
     if (!geojsonData) return; // Ensure geojsonData is loaded
     
@@ -118,7 +117,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
       .map((feature) => feature.properties.id);
 
     onFilterChange(newFilteredIds);
-  }, [selectedDepthCategories, selectedMagnitudeCategories, geojsonData, onFilterChange]);
+  }, [selectedDepthCategories, selectedMagnitudeCategories]);
 
   useEffect(() => {
     if (topojsonData && geojsonData && crossfilterData) {
