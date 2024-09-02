@@ -243,26 +243,30 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
       function brushEnd(event) {
         if (isClearingBrush) return;
-
+      
         if (!event.selection) {
           isClearingBrush = true;
           brushSelectionRef.current = null;
           brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
+      
           if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
             applyCategories();
+          } else {
+            onFilterChange([]); // You may want to wrap this in a conditional as well
           }
-          else {
-            onFilterChange([]);
-          }
+      
           isClearingBrush = false;
-        }
-        else {
+        } else {
           brushSelectionRef.current = event.selection;
-          onFilterChange(brushedIdsRef.current);
+      
+          const newFilteredIds = brushedIdsRef.current;
+          if (JSON.stringify(filteredEarthquakeIds) !== JSON.stringify(newFilteredIds)) {
+            onFilterChange(newFilteredIds);
+          }
         }
-      }
+      }      
 
       if (brushSelectionRef.current) {
         brushGroup.call(brush.move, brushSelectionRef.current);

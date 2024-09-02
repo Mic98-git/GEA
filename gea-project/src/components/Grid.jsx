@@ -14,8 +14,18 @@ const VisualizationGrid = () => {
 
   // Callback to update the filtered earthquake IDs
   const handleFilterChange = useCallback((newFilteredIds) => {
-    setFilteredEarthquakeIds(newFilteredIds);
-  });
+    setFilteredEarthquakeIds((prevFilteredIds) => {
+      // If there are no previous filters, just return the new ones
+      if (prevFilteredIds.length === 0) {
+        return newFilteredIds;
+      }
+  
+      // Find the intersection of previous and new filtered IDs
+      const combinedFilteredIds = prevFilteredIds.filter(id => newFilteredIds.includes(id));
+  
+      return combinedFilteredIds;
+    });
+  }, []);
 
   return (
     <div className="grid">

@@ -208,6 +208,11 @@ body {
   stroke: #999;
 }
 
+.map .brush .handle,
+.parallel-coordinates .brush .handle {
+  fill: #444;
+}
+
 svg {
   display: inline-block;
   vertical-align: middle;
