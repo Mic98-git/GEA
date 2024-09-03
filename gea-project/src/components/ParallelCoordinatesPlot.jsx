@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, memo } from "react";
 import * as d3 from "d3";
 
 const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
-  const dimensions = ["magSource", "magType", "type", "dmin_category"];
+  const dimensions = ["net", "magType", "type", "dmin_category"];
   const svgRef = useRef();
   const brushSelectionRef = useRef(null);
   const brushedIdsRef = useRef([]);
@@ -14,10 +14,32 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
 
   // Custom y-axis labels mapping
   const yAxisLabels = {
-    magSource: "Magnitude Source",
-    magType: "Magnitude Type",
+    net: "Reporting Network",
+    magType: "Magnitude Scale",
     type: "Event Type",
     dmin_category: "Epicenter Nearest Station"
+  };
+
+  const categoryDescriptions = {
+    uw: "Pacific Northwest Seismic Network (PNSN), operated by the University of Washington.",
+    uu: "University of Utah Seismograph Stations (UUSS), monitoring the Intermountain West region.",
+    us: "United States Geological Survey (USGS), which is responsible for monitoring seismic activity in the U.S. and globally.",
+    tx: "Texas Seismological Network, monitoring seismic activity primarily in Texas.",
+    pr: "Puerto Rico Seismic Network, focused on seismic activity around Puerto Rico and the Caribbean.",
+    nm: "New Madrid Seismic Zone Network, monitoring the central U.S.",
+    nc: "Northern California Seismic System (NCSS), operated by the USGS and University of California, Berkeley.",
+    ci: "California Institute of Technology, part of the Southern California Seismic Network.",
+  };
+
+  const magTypeDescriptions = {
+    mww: "Moment Magnitude (Mw) - Calculated from the seismic moment, generally for large earthquakes.",
+    mwr: "Regional Moment Magnitude (Mwr) - A variant of moment magnitude for regional events.",
+    mwc: "Centroid Moment Magnitude (Mwc) - A specific type of moment magnitude calculation using centroid.",
+    mwb: "Broadband Moment Magnitude (Mwb) - Derived from broadband seismic data.",
+    ml: "Local Magnitude (ML) - Also known as the Richter scale, used for small to medium earthquakes.",
+    md: "Duration Magnitude (Md) - Calculated from the duration of seismic waves, often for smaller events.",
+    mb_lg: "Lg Magnitude (mb_Lg) - Uses Lg surface waves for magnitude calculation, common in North America.",
+    mb: "Body Wave Magnitude (Mb) - Based on P-waves, typically used for deeper earthquakes.",
   };
 
   useEffect(() => {
@@ -170,7 +192,28 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
       .style("fill", "white")
       .style("font-size", "11px")
       .style("-webkit-user-select", "none")
-      .style("user-select", "none");
+      .style("user-select", "none")
+      .on("mouseover", function(event, value) {
+        const dimension = d3.select(this.parentNode.parentNode).datum();
+        const cat = categoryMappings[dimension][value];
+        let description = "";
+        if (dimension === "net") {
+          description = categoryDescriptions[cat] || "Unknown network";
+        } else if (dimension === "magType") {
+          description = magTypeDescriptions[cat] || "Unknown magnitude scale";
+        } else {
+          const category = categoryMappings[dimension] ? cat : value;
+          description = `${category}`;
+        }
+        tooltip
+          .style("opacity", 1)
+          .html(description)
+          .style("left", `${event.pageX + 5}px`)
+          .style("top", `${event.pageY - 28}px`);
+      })
+      .on("mouseout", () => {
+        tooltip.style("opacity", 0);
+      });
 
     axis.selectAll("path, line").style("stroke", "white");
 

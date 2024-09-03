@@ -11,7 +11,7 @@ df = pd.read_csv('./earthquakes_2023_global.csv')
 df = df.drop(df[df['status'] == 'automatic'].index)
 df.drop_duplicates(inplace=True)
 df.dropna(inplace=True)
-df.drop(['nst', 'gap', 'rms', 'net', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
+df.drop(['nst', 'gap', 'rms', 'id', 'updated', 'horizontalError', 'status'], axis=1, inplace=True)
 df = df.iloc[15000:20000, :]
 
 # Reformat time column
@@ -91,29 +91,34 @@ gdf.to_file("../gea-project/public/eq_coordinates.geojson", driver="GeoJSON")
 le_magnitude_type = LabelEncoder()
 le_seismic_event = LabelEncoder()
 le_reporting_magnitude_source = LabelEncoder()
+le_reporting_network = LabelEncoder()
 le_dmin = LabelEncoder()
 
 # Fit and transform the data
 magnitude_type_encoded = le_magnitude_type.fit_transform(df['magType'])
 seismic_event_encoded = le_seismic_event.fit_transform(df['type'])
 reporting_magnitude_source_encoded = le_reporting_magnitude_source.fit_transform(df['magSource'])
+reporting_network_encoded = le_reporting_network.fit_transform(df['net'])
 dmin_encoded = le_dmin.fit_transform(df['dmin_category'])
 
 # Create encoding dictionaries
 magnitude_type_mapping = {value: code for value, code in zip(le_magnitude_type.classes_, le_magnitude_type.transform(le_magnitude_type.classes_))}
 seismic_event_mapping = {value: code for value, code in zip(le_seismic_event.classes_, le_seismic_event.transform(le_seismic_event.classes_))}
 reporting_magnitude_source_mapping  = {value: code for value, code in zip(le_reporting_magnitude_source.classes_, le_reporting_magnitude_source.transform(le_reporting_magnitude_source.classes_))}
+reporting_network_mapping  = {value: code for value, code in zip(le_reporting_network.classes_, le_reporting_network.transform(le_reporting_network.classes_))}
 dmin_mapping  = {value: code for value, code in zip(le_dmin.classes_, le_dmin.transform(le_dmin.classes_))}
 
 df['magType'] = df['magType'].map(lambda x: f"{x}: {magnitude_type_mapping[x]}")
 df['type'] = df['type'].map(lambda x: f"{x}: {seismic_event_mapping[x]}")
 df['magSource'] = df['magSource'].map(lambda x: f"{x}: {reporting_magnitude_source_mapping[x]}")
+df['net'] = df['net'].map(lambda x: f"{x}: {reporting_network_mapping[x]}")
 df['dmin_category'] = df['dmin_category'].map(lambda x: f"{x}: {dmin_mapping[x]}")
 
 ## t-SNE dimensionality reduction
 df['magType_encoded'] = df['magType'].apply(lambda x: int(x.split(': ')[1]))
+df['magSource_encoded'] = df['magSource'].apply(lambda x: int(x.split(': ')[1]))
 df['type_encoded'] = df['type'].apply(lambda x: int(x.split(': ')[1]))
-core_features = ['mag', 'depth', 'latitude', 'longitude', 'magType_encoded', 'type_encoded', 'depthError', 'magError', 'magNst']
+core_features = ['mag', 'depth', 'latitude', 'longitude', 'magType_encoded', 'magSource_encoded', 'type_encoded', 'depthError', 'magError', 'magNst']
 df_filtered = df[core_features].copy()
 
 data = df_filtered.values
@@ -127,7 +132,7 @@ df['tsne_x'] = x
 df['tsne_y'] = y
 
 # Drop the encoded columns before saving
-df.drop(columns=['magType_encoded', 'type_encoded'], inplace=True)
+df.drop(columns=['magType_encoded', 'type_encoded', 'magSource_encoded'], inplace=True)
 
 # Export preprocessed dataset
 df.to_csv('../gea-project/public/prep_dataset.csv', index=False, sep=',')
