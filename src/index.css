@@ -1,0 +1,222 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Hide scrollbars */
+  height: 100vh; /* Full viewport height */
+}
+
+.header {
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers content horizontally */
+}
+
+.content {
+  flex: 1; /* Take up remaining space */
+  display: flex; /* Use Flexbox for grid layout */
+  box-sizing: border-box; /* Include padding and borders in width calculations */
+  overflow: hidden; /* Hide overflow if content is too large */
+}
+
+.grid {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background: rgb(0, 0, 0);
+  box-sizing: border-box;
+}
+
+.first-column {
+  display: flex;
+  flex-direction: column;
+  width: calc(60vw - 1px); /* 60% of viewport width minus margins */
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.second-column {
+  display: flex;
+  flex-direction: column;
+  width: calc(40vw - 1px); /* 40% of viewport width minus margins */
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.grid-item {
+  background: rgb(86, 86, 86);
+  margin: 1px; /* Space between grid items */
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  box-sizing: border-box;
+  border-radius: 4px;
+  position: relative;
+  flex: 1 1 calc(50% - 1px); /* Flex items to take up 50% height with margins */
+}
+
+.geomap-item {
+  flex: 0 0 60%; /* 60% height */
+}
+
+.parallel-item {
+  flex: 0 0 40%; /* 40% height */
+}
+
+.second-column .grid-item {
+  flex: 1 1 calc(50% - 1px); /* Flex items to take up 50% height with margins */
+}
+
+.zoom-controls {
+  position: absolute;
+  top: 10px;
+  left: 5px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+}
+
+.zoom-controls button {
+  margin: 2px;
+  font-size: 18px;
+  text-align: center;
+  color: #000000;
+  cursor: pointer;
+  border: none;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.zoom-controls button:hover {
+  background-color: darkgrey;
+}
+
+.resize-map {
+  display: flex;
+  margin: auto;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+}
+
+.legend-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  background: rgba(170, 170, 170, 0.7);
+  padding: 5px;
+  border-radius: 4px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+  margin: 0 10px; /* Add some space between the two legends */
+  width: fit-content;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.legend-circle,
+.legend-square {
+  display: inline-block;
+  margin-right: 2px;
+}
+
+.legend-circle {
+  border-radius: 50%;
+}
+
+.legend-square {
+  border-radius: 2px;
+}
+
+.legend-text {
+  margin-left: 2px;
+}
+
+.legend-title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-right: 5px;
+  margin-left: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.weekLabel,
+.monthLabel {
+  font-size: 15px;
+  fill: white;
+}
+
+.time-heatmap,
+.parallel-coordinates,
+.scatterplot,
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.tooltip {
+  position: absolute;
+  text-align: center;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  background-color: white;
+  padding: 5px;
+  border: 0px;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  box-sizing: border-box;
+  z-index: 1001;
+  transition: opacity 0.2s;
+}
+
+.map .brush .selection,
+.parallel-coordinates .brush .selection {
+  fill: #ccc;
+  fill-opacity: 0.3;
+  stroke: #999;
+}
+
+.map .brush .handle,
+.parallel-coordinates .brush .handle {
+  fill: #444;
+}
+
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
