@@ -117,6 +117,7 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
           updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
         );
       }
+      applyCategoriesToOthersCharts(updatedCategories);
     } else {
       // Select category
       const updatedCategories = [...selectedCategories, magnitudeCategory];
@@ -124,10 +125,11 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
       svg.selectAll("circle").attr("opacity", (d) =>
         updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
       );
+      applyCategoriesToOthersCharts(updatedCategories);
     }
   };
 
-  /*const applyCategoriesToOthersCharts = (magnitudeCategories) => {
+  const applyCategoriesToOthersCharts = (magnitudeCategories) => {
     const filteredIds = tSNEData.filter((d) =>
     (magnitudeCategories.length === 0 ||
       magnitudeCategories.includes(d.magnitude_category))
@@ -135,7 +137,7 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
       .map((d) => d.id);
 
     onFilterChange(filteredIds); // Send the filtered IDs to the parent component
-  };*/
+  };
 
   return (
     <div className="scatterplot">
