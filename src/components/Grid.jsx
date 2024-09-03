@@ -5,9 +5,9 @@ import TSNEScatterPlot from './T-SNEScatterplot';
 import ParallelCoordinates from './ParallelCoordinatesPlot';
 
 const VisualizationGrid = () => {
-  const topojsonUrl = '/countries.json';
-  const geojsonUrl = '/eq_coordinates.geojson';
-  const csvUrl = '/prep_dataset.csv';
+  const topojsonUrl = '/GEA/countries.json';
+  const geojsonUrl = '/GEA/eq_coordinates.geojson';
+  const csvUrl = '/GEA/prep_dataset.csv';
 
   // State to manage the filtered earthquake IDs for each chart
   const [geoMapFilters, setGeoMapFilters] = useState([]);
