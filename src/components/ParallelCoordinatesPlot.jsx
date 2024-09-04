@@ -104,25 +104,56 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
     // Draw paths in a separate group
     const pathGroup = svg.append("g").attr("class", "paths");
 
+    function isValidData(d) {
+      return dimensions.every(dim => !isNaN(d[dim]) && isFinite(d[dim]));
+    }
+    
     function updatePaths(dataToDisplay) {
-      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
-
+      // Filter out invalid data points
+      const filteredData = dataToDisplay.filter(isValidData);
+    
+      // Calculate path counts for the current subset of data
+      const subsetPathCounts = {};
+      filteredData.forEach((d) => {
+        const pathString = dimensions.map((p) => d[p]).join(",");
+        subsetPathCounts[pathString] = (subsetPathCounts[pathString] || 0) + 1;
+      });
+    
+      // Update paths that are part of filteredData
+      const updatedPaths = pathGroup.selectAll("path").data(filteredData, (d) => dimensions.map((p) => d[p]).join(","));
+    
       updatedPaths
         .attr("d", path)
         .style("stroke", "steelblue")
+        .style("stroke-width", (d) => {
+          const pathString = dimensions.map((p) => d[p]).join(",");
+          const count = subsetPathCounts[pathString] || 1;
+          const maxStrokeWidth = 7;
+          const minStrokeWidth = 1;
+    
+          return minStrokeWidth + ((count - 1) / filteredData.length) * (maxStrokeWidth - minStrokeWidth);
+        })
         .style("opacity", 1);
-
+    
+      // Enter new paths
       updatedPaths
         .enter()
         .append("path")
         .attr("d", path)
         .style("fill", "none")
         .style("stroke", "steelblue")
-        .style("stroke-width", 1.5)
+        .style("stroke-width", (d) => {
+          const pathString = dimensions.map((p) => d[p]).join(",");
+          const count = subsetPathCounts[pathString] || 1;
+          const maxStrokeWidth = 7;
+          const minStrokeWidth = 1;
+    
+          return minStrokeWidth + ((count - 1) / filteredData.length) * (maxStrokeWidth - minStrokeWidth);
+        })
         .style("opacity", 1);
-
+    
       updatedPaths.exit().remove();
-    }
+    }    
 
     // Draw axes
     const axisGroup = svg.append("g").attr("class", "axes");
@@ -193,7 +224,7 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
       .style("font-size", "11px")
       .style("-webkit-user-select", "none")
       .style("user-select", "none")
-      .on("mouseover", function(event, value) {
+      .on("mouseover", function (event, value) {
         const dimension = d3.select(this.parentNode.parentNode).datum();
         const cat = categoryMappings[dimension][value];
         let description = "";
@@ -256,8 +287,8 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         delete activeBrushesRef.current[dimension];
       }
 
-      const brushedData = getFilteredData();
-      brushedIdsRef.current = brushedData.map((d) => d.id);
+      const brushedData = getFilteredData().map((d) => d.id);
+      brushedIdsRef.current = brushedData;
       updatePaths(brushedData);
     }
 
@@ -272,10 +303,12 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         brushSelectionRef.current = null;
       } else {
         brushSelectionRef.current = selection;
-        const newFilteredIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
+
+        const newFilteredIds = getFilteredData().map((d) => d.id);
+
+        brushedIdsRef.current = newFilteredIds;
 
         if (JSON.stringify(newFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
-          brushedIdsRef.current = newFilteredIds;
           applyFiltersToOthersCharts(newFilteredIds);
         }
       }

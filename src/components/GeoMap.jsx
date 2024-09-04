@@ -233,8 +233,8 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
         const selection = event.selection;
         if (selection) {
           brushSelectionRef.current = selection;
-          const brushedData = getFilteredData(selection);
-          brushedIdsRef.current = brushedData.map((d) => d.properties.id);
+          const brushedData = getFilteredData(selection).map((d) => d.properties.id);;
+          brushedIdsRef.current = brushedData;
           circles.attr("opacity", (d) => {
             return brushedIdsRef.current.includes(d.properties.id) && areCategoriesApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
           });
@@ -243,29 +243,28 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
       function brushEnd(event) {
         if (isClearingBrushRef.current) return;
-
+      
         if (!event.selection) {
           isClearingBrushRef.current = true;
           brushSelectionRef.current = null;
           brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
-
+      
           if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
             applyCategories();
           } else {
-            onFilterChange([]); // You may want to wrap this in a conditional as well
+            onFilterChange([]);
           }
-
+      
           isClearingBrushRef.current = false;
         } else {
           brushSelectionRef.current = event.selection;
-
-          const updatedBrushedIds = brushedIdsRef.current.filter(id => filteredEarthquakeIds.includes(id));
-
-          // Compare updated brushed IDs with current filtered IDs
+      
+          const updatedBrushedIds = getFilteredData(event.selection).map(d => d.properties.id);
+          brushedIdsRef.current = updatedBrushedIds;
+      
           if (JSON.stringify(updatedBrushedIds) !== JSON.stringify(filteredEarthquakeIds)) {
-            brushedIdsRef.current = updatedBrushedIds;
             onFilterChange(updatedBrushedIds);
           }
         }
