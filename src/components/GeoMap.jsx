@@ -151,8 +151,8 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
       const brush = d3
         .brush()
         .extent([
-          [0, 0],
-          [width, height],
+          [-panPadding, -panPadding],
+          [width + panPadding, height + panPadding],
         ])
         .on("start", () => isBrushingRef.current = true)
         .on("brush", (event) => {
