@@ -103,46 +103,61 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
 
     // Draw paths in a separate group
     const pathGroup = svg.append("g").attr("class", "paths");
-
+    
     function updatePaths(dataToDisplay) {
       const subsetPathCounts = new Map();
       const getPathString = (d) => dimensions.map((p) => d[p]).join(",");
     
+      // Create a map to keep track of the path strings in the filtered data
       dataToDisplay.forEach((d) => {
         const pathString = getPathString(d);
         subsetPathCounts.set(pathString, (subsetPathCounts.get(pathString) || 0) + 1);
       });
     
-      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
+      const allPaths = pathGroup.selectAll("path").data(data, (d) => d.id);
     
       const maxStrokeWidth = 7;
       const minStrokeWidth = 1;
     
-      updatedPaths
-        .attr("d", path)
-        .style("stroke", "steelblue")
-        .style("stroke-width", (d) => {
-          const pathString = getPathString(d);
-          const count = subsetPathCounts.get(pathString) || 1;
-          return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
-        })
-        .style("opacity", 1);
-    
-      // Enter new paths
-      updatedPaths
-        .enter()
-        .append("path")
+      // Update existing paths
+      allPaths
         .attr("d", path)
         .style("fill", "none")
         .style("stroke", "steelblue")
         .style("stroke-width", (d) => {
           const pathString = getPathString(d);
-          const count = subsetPathCounts.get(pathString) || 1;
-          return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
+          if (subsetPathCounts.has(pathString)) {
+            const count = subsetPathCounts.get(pathString) || 1;
+            return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
+          } else {
+            return 0.5;
+          }
         })
-        .style("opacity", 1);
+        .style("opacity", (d) => {
+          const pathString = getPathString(d);
+          return subsetPathCounts.has(pathString) ? 1 : 0.02;
+        });
     
-      updatedPaths.exit().remove();
+      // Enter new paths
+      allPaths
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .style("fill", "none")
+        .style("stroke",  "steelblue")
+        .style("stroke-width", (d) => {
+          const pathString = getPathString(d);
+          if (subsetPathCounts.has(pathString)) {
+            const count = subsetPathCounts.get(pathString) || 1;
+            return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
+          } else {
+            return 0.5;
+          }
+        })
+        .style("opacity", (d) => {
+          const pathString = getPathString(d);
+          return subsetPathCounts.has(pathString) ? 1 : 0.02;
+        });
     }    
 
     // Draw axes
