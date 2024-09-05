@@ -103,22 +103,22 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
 
     // Draw paths in a separate group
     const pathGroup = svg.append("g").attr("class", "paths");
-    
+
     function updatePaths(dataToDisplay) {
       const subsetPathCounts = new Map();
       const getPathString = (d) => dimensions.map((p) => d[p]).join(",");
-    
+
       // Create a map to keep track of the path strings in the filtered data
       dataToDisplay.forEach((d) => {
         const pathString = getPathString(d);
         subsetPathCounts.set(pathString, (subsetPathCounts.get(pathString) || 0) + 1);
       });
-    
+
       const allPaths = pathGroup.selectAll("path").data(data, (d) => d.id);
-    
+
       const maxStrokeWidth = 7;
       const minStrokeWidth = 1;
-    
+
       // Update existing paths
       allPaths
         .attr("d", path)
@@ -130,35 +130,35 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             const count = subsetPathCounts.get(pathString) || 1;
             return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
           } else {
-            return 0.5;
+            return 0.3;
           }
         })
         .style("opacity", (d) => {
           const pathString = getPathString(d);
-          return subsetPathCounts.has(pathString) ? 1 : 0.02;
+          return subsetPathCounts.has(pathString) ? 1 : 0.3;
         });
-    
+
       // Enter new paths
       allPaths
         .enter()
         .append("path")
         .attr("d", path)
         .style("fill", "none")
-        .style("stroke",  "steelblue")
+        .style("stroke", "steelblue")
         .style("stroke-width", (d) => {
           const pathString = getPathString(d);
           if (subsetPathCounts.has(pathString)) {
             const count = subsetPathCounts.get(pathString) || 1;
             return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
           } else {
-            return 0.5;
+            return 0.3;
           }
         })
         .style("opacity", (d) => {
           const pathString = getPathString(d);
-          return subsetPathCounts.has(pathString) ? 1 : 0.02;
+          return subsetPathCounts.has(pathString) ? 1 : 0.3;
         });
-    }    
+    }
 
     // Draw axes
     const axisGroup = svg.append("g").attr("class", "axes");
@@ -262,9 +262,9 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         isBrushingRef.current = true;
         brushed(event, dimension)
       })
-      .on("end", (event, dimension) => {
+      .on("end", (event) => {
         isBrushingRef.current = false;
-        brushEnd(event, dimension)
+        brushEnd(event)
       });
 
     axis
@@ -297,9 +297,7 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
       brushedIdsRef.current = brushedData.map((d) => d.id);
     }
 
-    function brushEnd(event, dimension) {
-      const selection = event.selection;
-
+    function brushEnd(event) {
       if (Object.keys(activeBrushesRef.current).length === 0) {
         // If no brushes are active, show all paths
         updatePaths(data);
@@ -307,14 +305,16 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         brushedIdsRef.current = [];
         brushSelectionRef.current = null;
       } else {
-        brushSelectionRef.current = selection;
+        brushSelectionRef.current = event.selection;
 
         const newFilteredIds = getFilteredData().map((d) => d.id);
 
-        brushedIdsRef.current = newFilteredIds;
+        const combinedFilteredIds = newFilteredIds.filter((id) => filteredEarthquakeIds.includes(id));
 
-        if (JSON.stringify(newFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
-          applyFiltersToOthersCharts(newFilteredIds);
+        brushedIdsRef.current = combinedFilteredIds;
+
+        if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
+          applyFiltersToOthersCharts(combinedFilteredIds);
         }
       }
     }

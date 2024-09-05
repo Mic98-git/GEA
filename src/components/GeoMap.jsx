@@ -225,7 +225,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           const [x, y] = projection(d.geometry.coordinates);
           const isInBrushedArea = x0 <= x && x <= x1 && y0 <= y && y <= y1;
 
-          return isInBrushedArea && areCategoriesApplied(d);
+          return isInBrushedArea && areCategoriesApplied(d) && isFilteringApplied(d);
         });
       }
 
@@ -233,7 +233,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
         const selection = event.selection;
         if (selection) {
           brushSelectionRef.current = selection;
-          const brushedData = getFilteredData(selection).map((d) => d.properties.id);;
+          const brushedData = getFilteredData(selection).map((d) => d.properties.id);
           brushedIdsRef.current = brushedData;
           circles.attr("opacity", (d) => {
             return brushedIdsRef.current.includes(d.properties.id) && areCategoriesApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
@@ -243,29 +243,32 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
       function brushEnd(event) {
         if (isClearingBrushRef.current) return;
-      
+
         if (!event.selection) {
           isClearingBrushRef.current = true;
           brushSelectionRef.current = null;
           brushedIdsRef.current = [];
           svg.select(".brush").call(brush.move, null);
           circles.attr("opacity", 1);
-      
+
           if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
             applyCategories();
           } else {
             onFilterChange([]);
           }
-      
+
           isClearingBrushRef.current = false;
         } else {
           brushSelectionRef.current = event.selection;
-      
+
           const updatedBrushedIds = getFilteredData(event.selection).map(d => d.properties.id);
-          brushedIdsRef.current = updatedBrushedIds;
-      
-          if (JSON.stringify(updatedBrushedIds) !== JSON.stringify(filteredEarthquakeIds)) {
-            onFilterChange(updatedBrushedIds);
+
+          const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id));
+          
+          brushedIdsRef.current = combinedFilteredIds;
+
+          if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
+            onFilterChange(combinedFilteredIds);
           }
         }
       }
@@ -362,23 +365,23 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      const step = 20;
+      const steps = 10;
       switch (event.key) {
         case "ArrowUp":
         case "w":
-          panMap(0, step);
+          panMap(0, steps);
           break;
         case "ArrowDown":
         case "s":
-          panMap(0, -step);
+          panMap(0, -steps);
           break;
         case "ArrowLeft":
         case "a":
-          panMap(step, 0);
+          panMap(steps, 0);
           break;
         case "ArrowRight":
         case "d":
-          panMap(-step, 0);
+          panMap(-steps, 0);
           break;
         default:
           return;
