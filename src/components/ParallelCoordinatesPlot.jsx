@@ -23,7 +23,7 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
   const categoryDescriptions = {
     uw: "Pacific Northwest Seismic Network (PNSN), operated by the University of Washington.",
     uu: "University of Utah Seismograph Stations (UUSS), monitoring the Intermountain West region.",
-    us: "United States Geological Survey (USGS), which is responsible for monitoring seismic activity in the U.S. and globally.",
+    us: "United States Geological Survey (USGS), monitoring seismic activity in the U.S. and globally.",
     tx: "Texas Seismological Network, monitoring seismic activity primarily in Texas.",
     pr: "Puerto Rico Seismic Network, focused on seismic activity around Puerto Rico and the Caribbean.",
     nm: "New Madrid Seismic Zone Network, monitoring the central U.S.",
@@ -32,13 +32,13 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
   };
 
   const magTypeDescriptions = {
-    mww: "Moment Magnitude (Mw) - Calculated from the seismic moment, generally for large earthquakes.",
+    mww: "Moment Magnitude (Mww) - Calculated from the seismic moment, generally for large earthquakes.",
     mwr: "Regional Moment Magnitude (Mwr) - A variant of moment magnitude for regional events.",
     mwc: "Centroid Moment Magnitude (Mwc) - A specific type of moment magnitude calculation using centroid.",
     mwb: "Broadband Moment Magnitude (Mwb) - Derived from broadband seismic data.",
-    ml: "Local Magnitude (ML) - Also known as the Richter scale, used for small to medium earthquakes.",
+    ml: "Local Magnitude (Ml) - Also known as the Richter scale, used for small to medium earthquakes.",
     md: "Duration Magnitude (Md) - Calculated from the duration of seismic waves, often for smaller events.",
-    mb_lg: "Lg Magnitude (mb_Lg) - Uses Lg surface waves for magnitude calculation, common in North America.",
+    mb_lg: "Lg Magnitude (Mb_Lg) - Uses Lg surface waves for magnitude calculation, common in North America.",
     mb: "Body Wave Magnitude (Mb) - Based on P-waves, typically used for deeper earthquakes.",
   };
 
@@ -104,34 +104,27 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
     // Draw paths in a separate group
     const pathGroup = svg.append("g").attr("class", "paths");
 
-    function isValidData(d) {
-      return dimensions.every(dim => !isNaN(d[dim]) && isFinite(d[dim]));
-    }
-    
     function updatePaths(dataToDisplay) {
-      // Filter out invalid data points
-      const filteredData = dataToDisplay.filter(isValidData);
+      const subsetPathCounts = new Map();
+      const getPathString = (d) => dimensions.map((p) => d[p]).join(",");
     
-      // Calculate path counts for the current subset of data
-      const subsetPathCounts = {};
-      filteredData.forEach((d) => {
-        const pathString = dimensions.map((p) => d[p]).join(",");
-        subsetPathCounts[pathString] = (subsetPathCounts[pathString] || 0) + 1;
+      dataToDisplay.forEach((d) => {
+        const pathString = getPathString(d);
+        subsetPathCounts.set(pathString, (subsetPathCounts.get(pathString) || 0) + 1);
       });
     
-      // Update paths that are part of filteredData
-      const updatedPaths = pathGroup.selectAll("path").data(filteredData, (d) => dimensions.map((p) => d[p]).join(","));
+      const updatedPaths = pathGroup.selectAll("path").data(dataToDisplay);
+    
+      const maxStrokeWidth = 7;
+      const minStrokeWidth = 1;
     
       updatedPaths
         .attr("d", path)
         .style("stroke", "steelblue")
         .style("stroke-width", (d) => {
-          const pathString = dimensions.map((p) => d[p]).join(",");
-          const count = subsetPathCounts[pathString] || 1;
-          const maxStrokeWidth = 7;
-          const minStrokeWidth = 1;
-    
-          return minStrokeWidth + ((count - 1) / filteredData.length) * (maxStrokeWidth - minStrokeWidth);
+          const pathString = getPathString(d);
+          const count = subsetPathCounts.get(pathString) || 1;
+          return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
         })
         .style("opacity", 1);
     
@@ -143,12 +136,9 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         .style("fill", "none")
         .style("stroke", "steelblue")
         .style("stroke-width", (d) => {
-          const pathString = dimensions.map((p) => d[p]).join(",");
-          const count = subsetPathCounts[pathString] || 1;
-          const maxStrokeWidth = 7;
-          const minStrokeWidth = 1;
-    
-          return minStrokeWidth + ((count - 1) / filteredData.length) * (maxStrokeWidth - minStrokeWidth);
+          const pathString = getPathString(d);
+          const count = subsetPathCounts.get(pathString) || 1;
+          return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
         })
         .style("opacity", 1);
     
@@ -287,9 +277,9 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         delete activeBrushesRef.current[dimension];
       }
 
-      const brushedData = getFilteredData().map((d) => d.id);
-      brushedIdsRef.current = brushedData;
+      const brushedData = getFilteredData();
       updatePaths(brushedData);
+      brushedIdsRef.current = brushedData.map((d) => d.id);
     }
 
     function brushEnd(event, dimension) {
