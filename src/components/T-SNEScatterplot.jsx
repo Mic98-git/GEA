@@ -2,11 +2,11 @@ import { memo, useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const magnitudeCategoryColorMap = {
-  minor: "#FFFF33",
-  light: "green",
-  moderate: "#8B4000",
-  strong: "red",
-  major: "purple"
+  minor: "#A8D5BA",
+  light: "#F4A460",
+  moderate: "#228B22",
+  strong: "#8B4000",
+  major: "#8B008B"
 };
 
 const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
