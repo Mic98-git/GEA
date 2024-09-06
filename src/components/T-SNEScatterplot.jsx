@@ -11,6 +11,9 @@ const magnitudeCategoryColorMap = {
 
 const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
+  const brushedIdsRef = useRef([]);
+  const brushSelectionRef = useRef(null);
+  const isClearingBrushRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [tSNEData, setTSNEData] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -67,10 +70,21 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
 
     svg.selectAll("*").remove(); // clear previous SVG content
 
+    const brush = d3
+      .brush()
+      .extent([
+        [0, 0],
+        [width, height],
+      ])
+      .on("brush", brushed)
+      .on("end", brushEnd);
+
+    const brushGroup = svg.append("g").attr("class", "brush").call(brush);
+
     svg.append("g").call(xAxis);
     svg.append("g").call(yAxis);
 
-    svg
+    const circles = svg
       .append("g")
       .attr("stroke", "black")
       .selectAll("circle")
@@ -79,16 +93,89 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
       .append("circle")
       .attr("cx", (d) => x(d.tsne_x))
       .attr("cy", (d) => y(d.tsne_y))
-      .attr("r", 3)
+      .attr("r", 2.25)
       .attr("fill", (d) => {
         const category = d.magnitude_category;
         const color = magnitudeCategoryColorMap[category];
         return color || "#000000";
       })
       .attr("opacity", (d) => {
-        return (filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d["id"])) ? 1 : 0.05;
+        return isFilteringApplied(d) && isMagCategoryApplied(d) ? 1 : 0.05;
       });
+
+    function getFilteredData(selection) {
+      if (!selection) return [];
+      const [[x0, y0], [x1, y1]] = selection;
+      return tSNEData.filter((d) => {
+        const xPos = x(d.tsne_x);
+        const yPos = y(d.tsne_y);
+        return x0 <= xPos && xPos <= x1 && y0 <= yPos && yPos <= y1;
+      });
+    }
+
+    function brushed(event) {
+      const selection = event.selection;
+      if (selection) {
+        brushSelectionRef.current = selection;
+        const brushedData = getFilteredData(selection).map((d) => d.id);
+        brushedIdsRef.current = brushedData;
+        circles.attr("opacity", (d) => {
+          return brushedIdsRef.current.includes(d.id) && isMagCategoryApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
+        });
+      }
+    }
+
+    function brushEnd(event) {
+      if (isClearingBrushRef.current) return;
+
+      if (!event.selection) {
+        isClearingBrushRef.current = true;
+
+        brushSelectionRef.current = null;
+
+        brushedIdsRef.current = [];
+
+        svg.select(".brush").call(brush.move, null);
+
+        circles.attr("opacity", 1);
+
+        onFilterChange([]);
+
+        isClearingBrushRef.current = false;
+      } else {
+        brushSelectionRef.current = event.selection;
+
+        const updatedBrushedIds = getFilteredData(event.selection).map(d => d.id);
+
+        const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id));
+
+        brushedIdsRef.current = combinedFilteredIds;
+
+        if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
+          onFilterChange(combinedFilteredIds);
+        }
+      }
+    }
+
+    if (brushSelectionRef.current) {
+      brushGroup.call(brush.move, brushSelectionRef.current);
+    }
   }, [tSNEData, dimensions, filteredEarthquakeIds]);
+
+  const isFilteringApplied = (d) => {
+    return filteredEarthquakeIds.length === 0 || filteredEarthquakeIds.includes(d.id);
+  }
+
+  const isMagCategoryApplied = (d) => {
+    return selectedCategories.length === 0 || selectedCategories.includes(d.magnitude_category);
+  }
+
+  useEffect(() => {
+    const filteredIds = tSNEData.filter((d) => isMagCategoryApplied(d))
+      .map((d) => d.id);
+
+    onFilterChange(filteredIds); // Send the filtered IDs to the parent component
+  }, [selectedCategories]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -105,38 +192,13 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
   }, []);
 
   const filterByMagnitude = (magnitudeCategory) => {
-    const svg = d3.select(svgRef.current);
-    if (selectedCategories.includes(magnitudeCategory)) {
-      // Deselect category
-      const updatedCategories = selectedCategories.filter(category => category !== magnitudeCategory);
-      setSelectedCategories(updatedCategories);
-      if (updatedCategories.length === 0) {
-        svg.selectAll("circle").attr("opacity", 1);
-      } else {
-        svg.selectAll("circle").attr("opacity", (d) =>
-          updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
-        );
-      }
-      applyCategoriesToOthersCharts(updatedCategories);
-    } else {
-      // Select category
-      const updatedCategories = [...selectedCategories, magnitudeCategory];
-      setSelectedCategories(updatedCategories);
-      svg.selectAll("circle").attr("opacity", (d) =>
-        updatedCategories.includes(d.magnitude_category) ? 1 : 0.05
-      );
-      applyCategoriesToOthersCharts(updatedCategories);
-    }
-  };
+    setSelectedCategories((prevCategories) => {
+      const updatedCategories = prevCategories.includes(magnitudeCategory)
+        ? prevCategories.filter((category) => category !== magnitudeCategory)
+        : [...prevCategories, magnitudeCategory];
 
-  const applyCategoriesToOthersCharts = (magnitudeCategories) => {
-    const filteredIds = tSNEData.filter((d) =>
-    (magnitudeCategories.length === 0 ||
-      magnitudeCategories.includes(d.magnitude_category))
-    )
-      .map((d) => d.id);
-
-    onFilterChange(filteredIds); // Send the filtered IDs to the parent component
+      return updatedCategories;
+    });
   };
 
   return (
