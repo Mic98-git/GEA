@@ -221,6 +221,11 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             .style("top", `${event.pageY - 28}px`);
         }*/
       })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", `${event.pageX + 5}px`)
+          .style("top", `${event.pageY - 28}px`);
+      })
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
       })
@@ -264,6 +269,11 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         tooltip
           .style("opacity", 1)
           .html(description)
+          .style("left", `${event.pageX + 5}px`)
+          .style("top", `${event.pageY - 28}px`);
+      })
+      .on("mousemove", function(event) {
+        tooltip
           .style("left", `${event.pageX + 5}px`)
           .style("top", `${event.pageY - 28}px`);
       })

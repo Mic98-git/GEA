@@ -6,7 +6,7 @@ import crosshairIcon from "../assets/crosshair.svg";
 
 const depthColorMap = {
   shallow: "red",
-  intermediate: "orange",
+  intermediate: "darkorange",
   deep: "blue",
 };
 
@@ -60,30 +60,6 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
     return depthFilter && magnitudeFilter;
   }
-
-  const applyCategories = () => {
-    if (!geojsonData) return; // Ensure geojsonData is loaded
-
-    // Determine the data source based on whether filtered IDs are present
-    const dataSource = filteredEarthquakeIds.length > 0
-      ? geojsonData.features.filter(feature => filteredEarthquakeIds.includes(feature.properties.id))
-      : geojsonData.features;
-
-    // Filter the features based on selected depth and magnitude categories
-    const filteredIds = dataSource
-      .filter(feature => {
-        areCategoriesApplied(feature);
-      })
-      .map(feature => feature.properties.id);
-
-    // Notify parent component of the filtered IDs
-    onFilterChange(filteredIds);
-  };
-
-  // apply the categories whenever depth or magnitude changes
-  useEffect(() => {
-    applyCategories();
-  }, [selectedDepthCategories, selectedMagnitudeCategories]);
 
   const filterByDepth = (depthCategory) => {
     setSelectedDepthCategories((prevCategories) => {
@@ -206,12 +182,16 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
               <strong>Time (UTC):</strong> ${d.properties.time}<br>
               <strong>Magnitude (${d.properties.magType}):</strong> ${d.properties.mag} &plusmn; ${d.properties.magError}<br>
               <strong>Depth:</strong> ${d.properties.depth} &plusmn; ${d.properties.depthError} km<br>            
-              <strong>Nearest station:</strong> ${d.properties.dmin} km
               `
               )
               .style("left", `${pageX + 10}px`)
               .style("top", `${pageY - 28}px`);
           }
+        })
+        .on("mousemove", function(event) {
+          tooltip
+            .style("left", `${event.pageX + 5}px`)
+            .style("top", `${event.pageY - 28}px`);
         })
         .on("mouseout", () => {
           tooltip.style("opacity", 0);
@@ -246,17 +226,17 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
         if (!event.selection) {
           isClearingBrushRef.current = true;
+
           brushSelectionRef.current = null;
+
           brushedIdsRef.current = [];
+
           svg.select(".brush").call(brush.move, null);
+
           circles.attr("opacity", 1);
 
-          if (selectedDepthCategories.length !== 0 || selectedMagnitudeCategories.length !== 0) {
-            applyCategories();
-          } else {
-            onFilterChange([]);
-          }
-
+          onFilterChange([]);
+          
           isClearingBrushRef.current = false;
         } else {
           brushSelectionRef.current = event.selection;

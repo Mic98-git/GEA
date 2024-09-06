@@ -11,7 +11,6 @@ const magnitudeCategoryColorMap = {
 
 const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange }) => {
   const svgRef = useRef();
-  const brushedIdsRef = useRef([]);
   const brushSelectionRef = useRef(null);
   const isClearingBrushRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -112,17 +111,16 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
         const xPos = x(d.tsne_x);
         const yPos = y(d.tsne_y);
         return x0 <= xPos && xPos <= x1 && y0 <= yPos && yPos <= y1;
-      });
+      }).map(d => d.id);
     }
 
     function brushed(event) {
       const selection = event.selection;
       if (selection) {
         brushSelectionRef.current = selection;
-        const brushedData = getFilteredData(selection).map((d) => d.id);
-        brushedIdsRef.current = brushedData;
+        const brushedData = getFilteredData(selection);
         circles.attr("opacity", (d) => {
-          return brushedIdsRef.current.includes(d.id) && isMagCategoryApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
+          return brushedData.includes(d.id) && isMagCategoryApplied(d) && isFilteringApplied(d) ? 1 : 0.05;
         });
       }
     }
@@ -132,27 +130,14 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
 
       if (!event.selection) {
         isClearingBrushRef.current = true;
-
         brushSelectionRef.current = null;
-
-        brushedIdsRef.current = [];
-
         svg.select(".brush").call(brush.move, null);
-
-        circles.attr("opacity", 1);
-
         onFilterChange([]);
-
         isClearingBrushRef.current = false;
       } else {
         brushSelectionRef.current = event.selection;
-
-        const updatedBrushedIds = getFilteredData(event.selection).map(d => d.id);
-
-        const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id));
-
-        brushedIdsRef.current = combinedFilteredIds;
-
+        const updatedBrushedIds = getFilteredData(event.selection);
+        const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id)); 
         if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
           onFilterChange(combinedFilteredIds);
         }
