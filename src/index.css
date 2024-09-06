@@ -201,6 +201,7 @@ body {
   transition: opacity 0.2s;
 }
 
+.scatterplot .brush .selection,
 .map .brush .selection,
 .parallel-coordinates .brush .selection {
   fill: #ccc;
@@ -208,6 +209,7 @@ body {
   stroke: #999;
 }
 
+.scatterplot .brush .handle,
 .map .brush .handle,
 .parallel-coordinates .brush .handle {
   fill: #444;

@@ -42,7 +42,9 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
     const height = svg.node().parentNode.clientHeight;
     const margin = { top: 20, right: 20, bottom: 60, left: 40 };
 
-    svg.attr("viewBox", `0 0 ${width} ${height}`);
+    svg.attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("width", width)
+      .attr("height", height);
 
     const x = d3
       .scaleLinear()
