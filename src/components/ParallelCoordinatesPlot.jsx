@@ -107,18 +107,18 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
     function updatePaths(dataToDisplay) {
       const subsetPathCounts = new Map();
       const getPathString = (d) => dimensions.map((p) => d[p]).join(",");
-
+    
       // Create a map to keep track of the path strings in the filtered data
       dataToDisplay.forEach((d) => {
         const pathString = getPathString(d);
         subsetPathCounts.set(pathString, (subsetPathCounts.get(pathString) || 0) + 1);
       });
-
+    
       const allPaths = pathGroup.selectAll("path").data(data, (d) => d.id);
-
+    
       const maxStrokeWidth = 7;
       const minStrokeWidth = 1;
-
+    
       // Update existing paths
       allPaths
         .attr("d", path)
@@ -137,8 +137,8 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
           const pathString = getPathString(d);
           return subsetPathCounts.has(pathString) ? 1 : 0.3;
         });
-
-      // Enter new paths
+    
+      // Enter new paths and apply mouseover events only for active events in dataToDisplay
       allPaths
         .enter()
         .append("path")
@@ -157,8 +157,28 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
         .style("opacity", (d) => {
           const pathString = getPathString(d);
           return subsetPathCounts.has(pathString) ? 1 : 0.3;
+        })
+        // Add mouseover and mouseout events for active paths in dataToDisplay
+        .on("mouseover", function(event, d) {
+          const pathString = getPathString(d);
+          const count = subsetPathCounts.get(pathString) || 0;
+          if (count > 0) {  // Only show tooltip for active paths
+            tooltip
+              .style("opacity", 1)
+              .html(`<strong>Number of events:</strong> ${count}`)
+              .style("left", `${event.pageX + 5}px`)
+              .style("top", `${event.pageY - 28}px`);
+          }
+        })
+        .on("mousemove", function(event) {
+          tooltip
+            .style("left", `${event.pageX + 5}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mouseout", function() {
+          tooltip.style("opacity", 0);
         });
-    }
+    }    
 
     // Draw axes
     const axisGroup = svg.append("g").attr("class", "axes");
