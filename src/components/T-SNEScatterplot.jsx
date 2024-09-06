@@ -3,7 +3,7 @@ import * as d3 from "d3";
 
 const magnitudeCategoryColorMap = {
   minor: "#A8D5BA",
-  light: "#F4A460",
+  light: "#D5ED5B",
   moderate: "#228B22",
   strong: "#8B4000",
   major: "#8B008B"
