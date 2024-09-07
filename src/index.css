@@ -218,14 +218,14 @@ body {
 .map .brush .selection,
 .parallel-coordinates .brush .selection {
   fill: #ccc;
-  fill-opacity: 0.3;
+  fill-opacity: 0.2;
   stroke: #999;
 }
 
 .scatterplot .brush .handle,
 .map .brush .handle,
 .parallel-coordinates .brush .handle {
-  fill: #444;
+  fill: #757575;
 }
 
 svg {
