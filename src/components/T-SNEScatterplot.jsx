@@ -132,12 +132,18 @@ const TSNEScatterplot = memo(({ csvUrl, filteredEarthquakeIds, onFilterChange })
         isClearingBrushRef.current = true;
         brushSelectionRef.current = null;
         svg.select(".brush").call(brush.move, null);
-        onFilterChange([]);
+        // Apply only the category filtering when the brush is cleared
+        if (selectedCategories.length > 0) {
+          const filteredByCategory = tSNEData.filter(d => isMagCategoryApplied(d)).map(d => d.id);
+          onFilterChange(filteredByCategory); // Keep filtered categories active
+        } else {
+          onFilterChange([]); // No categories selected, clear all
+        }
         isClearingBrushRef.current = false;
       } else {
         brushSelectionRef.current = event.selection;
         const updatedBrushedIds = getFilteredData(event.selection);
-        const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id)); 
+        const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id));
         if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
           onFilterChange(combinedFilteredIds);
         }

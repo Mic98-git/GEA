@@ -188,7 +188,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
               .style("top", `${pageY - 28}px`);
           }
         })
-        .on("mousemove", function(event) {
+        .on("mousemove", function (event) {
           tooltip
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
@@ -233,10 +233,14 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
 
           svg.select(".brush").call(brush.move, null);
 
-          circles.attr("opacity", 1);
+          // Apply only the category filtering when the brush is cleared
+          if (selectedDepthCategories.length > 0 || selectedMagnitudeCategories.length > 0) {
+            const filteredByCategory = geojsonData.features.filter(d => areCategoriesApplied(d)).map(d => d.properties.id);
+            onFilterChange(filteredByCategory); // Keep filtered categories active
+          } else {
+            onFilterChange([]); // No categories selected, clear all
+          }
 
-          onFilterChange([]);
-          
           isClearingBrushRef.current = false;
         } else {
           brushSelectionRef.current = event.selection;
@@ -244,7 +248,7 @@ const GeoMap = memo(({ topojsonUrl, geojsonUrl, filteredEarthquakeIds, onFilterC
           const updatedBrushedIds = getFilteredData(event.selection).map(d => d.properties.id);
 
           const combinedFilteredIds = updatedBrushedIds.filter((id) => filteredEarthquakeIds.includes(id));
-          
+
           brushedIdsRef.current = combinedFilteredIds;
 
           if (JSON.stringify(combinedFilteredIds) !== JSON.stringify(filteredEarthquakeIds)) {
