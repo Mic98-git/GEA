@@ -55,7 +55,7 @@ body {
 }
 
 .grid-item {
-  background: rgb(86, 86, 86);
+  background: rgb(66, 66, 66);
   margin: 1px; /* Space between grid items */
   display: flex;
   justify-content: center; /* Center horizontally */
@@ -64,6 +64,19 @@ body {
   border-radius: 4px;
   position: relative;
   flex: 1 1 calc(50% - 1px); /* Flex items to take up 50% height with margins */
+}
+
+.footer {
+  border-radius: 4px;
+  margin: 1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  background: rgb(66, 66, 66);
+  color: white;
+  font-weight: bold;
+  font-size: 15px;
 }
 
 .geomap-item {

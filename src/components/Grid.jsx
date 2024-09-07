@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import GeoMap from './GeoMap';
 import TimeHeatmap from './TimeHeatmap';
 import TSNEScatterPlot from './T-SNEScatterplot';
@@ -14,9 +14,9 @@ const VisualizationGrid = () => {
   const [parallelCoordinatesFilters, setParallelCoordinatesFilters] = useState([]);
   const [timeHeatmapFilters, setTimeHeatmapFilters] = useState([]);
   const [tsneScatterPlotFilters, setTsneScatterPlotFilters] = useState([]);
+  const [numFilteredEvents, setNumFilteredEvents] = useState(5000);
 
-  // Function to combine all filters using AND logic across different charts
-  const combineFilters = () => {
+  const combineFilters = useCallback(() => {
     const allFilters = [
       geoMapFilters,
       parallelCoordinatesFilters,
@@ -32,7 +32,13 @@ const VisualizationGrid = () => {
     }, []);
 
     return combinedFilteredIds;
-  };
+  }, [geoMapFilters, parallelCoordinatesFilters, timeHeatmapFilters, tsneScatterPlotFilters]);
+
+  // Use effect to update the number of filtered events when the filters change
+  useEffect(() => {
+    const filteredIds = combineFilters();
+    setNumFilteredEvents(filteredIds.length);
+  }, [geoMapFilters, parallelCoordinatesFilters, timeHeatmapFilters, tsneScatterPlotFilters, combineFilters]);
 
   // Callbacks to handle filter changes for each chart
   const handleGeoMapFilterChange = useCallback((newFilteredIds) => {
@@ -87,6 +93,9 @@ const VisualizationGrid = () => {
             filteredEarthquakeIds={filteredEarthquakeIds}
             onFilterChange={handleTSNEScatterPlotFilterChange}
           />
+        </div>
+        <div className="footer">
+          <strong>Events considered: {numFilteredEvents !== 0 ? numFilteredEvents : 5000} / 5000</strong>
         </div>
       </div>
     </div>
