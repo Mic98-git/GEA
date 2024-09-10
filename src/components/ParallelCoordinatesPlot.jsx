@@ -119,8 +119,8 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
       const maxStrokeWidth = 7;
       const minStrokeWidth = 1;
     
-      // Update existing paths
-      allPaths
+      allPaths.enter().append("path")
+        .merge(allPaths)
         .attr("d", path)
         .style("fill", "none")
         .style("stroke", "steelblue")
@@ -130,33 +130,12 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             const count = subsetPathCounts.get(pathString) || 1;
             return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
           } else {
-            return 0.3;
+            return 0.1;
           }
         })
         .style("opacity", (d) => {
           const pathString = getPathString(d);
-          return subsetPathCounts.has(pathString) ? 1 : 0.3;
-        });
-    
-      // Enter new paths and apply mouseover events only for active events in dataToDisplay
-      allPaths
-        .enter()
-        .append("path")
-        .attr("d", path)
-        .style("fill", "none")
-        .style("stroke", "steelblue")
-        .style("stroke-width", (d) => {
-          const pathString = getPathString(d);
-          if (subsetPathCounts.has(pathString)) {
-            const count = subsetPathCounts.get(pathString) || 1;
-            return minStrokeWidth + ((count - 1) / dataToDisplay.length) * (maxStrokeWidth - minStrokeWidth);
-          } else {
-            return 0.3;
-          }
-        })
-        .style("opacity", (d) => {
-          const pathString = getPathString(d);
-          return subsetPathCounts.has(pathString) ? 1 : 0.3;
+          return subsetPathCounts.has(pathString) ? 1 : 0.05;
         })
         // Add mouseover and mouseout events for active paths in dataToDisplay
         .on("mouseover", function(event, d) {
