@@ -191,6 +191,8 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             .html(`Click to clear filter on ${yAxisLabels[dimension]}`)
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
+        } else {
+          tooltip.style("opacity", 0);
         }
         /*else {
           tooltip
@@ -307,6 +309,9 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
     }
 
     function brushEnd(event) {
+      isBrushingRef.current = false;
+      tooltip.style("opacity", 0);
+
       if (Object.keys(activeBrushesRef.current).length === 0) {
         // If no brushes are active, show all paths
         updatePaths(data);
