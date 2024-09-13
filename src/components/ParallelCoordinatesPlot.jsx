@@ -191,8 +191,6 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             .html(`Click to clear filter on ${yAxisLabels[dimension]}`)
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
-        } else {
-          tooltip.style("opacity", 0);
         }
         /*else {
           tooltip
