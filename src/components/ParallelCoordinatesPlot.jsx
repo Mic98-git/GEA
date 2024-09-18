@@ -184,7 +184,7 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             )
         );
       })
-      .on("mouseover", function (event, dimension) {
+      /*.on("mouseover", function (event, dimension) {
         if (activeBrushesRef.current[dimension] && !isBrushingRef.current) {
           tooltip
             .style("opacity", 1)
@@ -192,13 +192,13 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
         }
-        /*else {
+        else {
           tooltip
             .style("opacity", 1)
             .html(`Brush to filter by ${yAxisLabels[dimension]}`)
             .style("left", `${event.pageX + 5}px`)
             .style("top", `${event.pageY - 28}px`);
-        }*/
+        }
       })
       .on("mousemove", function(event) {
         tooltip
@@ -207,9 +207,9 @@ const ParallelCoordinates = memo(({ csvUrl, filteredEarthquakeIds, onFilterChang
       })
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
-      })
+      })*/
       .on("click", function (_, dimension) {
-        tooltip.style("opacity", 0);
+        //tooltip.style("opacity", 0);
         if (activeBrushesRef.current[dimension]) {
           clearBrush(dimension);
         }
