@@ -8,5 +8,4 @@ You can access and interact with the GEA dashboard by following this link:
 [Dashboard link](https://mic98-git.github.io/GEA/)
 
 ## Documentation
-[Project Report](GEA_report.pdf)  
-This document contains the pdf report for the project, including methodologies, results, and conclusions.
+This document contains the pdf report for the project, including methodologies, results, and conclusions. [Project Report](GEA_report.pdf)
